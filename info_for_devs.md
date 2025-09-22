@@ -18,3 +18,12 @@ Armazena os aplicativos instalados
 
 ### apps/libs/
 - Armazena bibliotecas para apps
+
+# system/
+
+| subpasta | função
+| -------- | ------ |
+| hostsys | Armazenar arquivos sh para interagir com o sistema host |
+| modules | Armazena módulos do pyOS |
+| tmp | arquivos temporários do pyOS |
+

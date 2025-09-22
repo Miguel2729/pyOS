@@ -1,5 +1,5 @@
 instalação(Linux)
- 1. execute apt install git e apt install python(se der erro tente apt install python3)
+ 1. execute apt install git e apt install python(se dererro tente apt install python3)
  2. se der erro paramos aqui
  3. execute python --version(ou python3 --version) e certifique-se que a versão é 3.6 ou mais recente
  4. execute cd [caminho desejado para o pyOS]

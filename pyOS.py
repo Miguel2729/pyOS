@@ -63,7 +63,6 @@ except ModuleNotFoundError:
 		quit()
 		
 # inicialização
-notas = []
 init()
 pyOSdir = os.getcwd
 colorconfig = Fore.WHITE
@@ -355,26 +354,92 @@ def calculadora():
 	# impossivel injetar codigo, quem falar que pode não olhou o codigo direito
 	
 def notepad():
-	global notas
-	executing = True
-	while executing:
-		print("açoes:\n1. ver\n2. adicionar\n3. remover\n4. sair")
-		acao = input("numero da acao:")
-		if acao == "1":
-			index = 0
-			for i in range(len(notas)):
-				print(notas[index])
-				index += 1
-		elif acao == "2":
-			nota = input("nota: ")
-			notas.append(nota)
-		elif acao == "3":
-			nota = input("nota a ser removida:")
-			notas.remove(nota)
-		elif acao == "4":
-			executing = False
-		else:
-			print("acao invalida")
+    # Criar diretório de notas se não existir
+    notes_dir = "./notes"
+    os.makedirs(notes_dir, exist_ok=True)
+    
+    executing = True
+    while executing:
+        print("açoes:\n1. ver\n2. adicionar\n3. remover\n4. sair")
+        acao = input("numero da acao:")
+        
+        if acao == "1":
+            # Listar todas as notas
+            try:
+                arquivos = os.listdir(notes_dir)
+                notas_txt = [f for f in arquivos if f.endswith('.txt')]
+                
+                if not notas_txt:
+                    print("Nenhuma nota encontrada.")
+                else:
+                    print("Notas:")
+                    for i, nota_file in enumerate(notas_txt, 1):
+                        nome_nota = nota_file[:-4]  # Remove .txt
+                        print(f"{i}. {nome_nota}")
+            except FileNotFoundError:
+                print("Diretório de notas não encontrado.")
+                
+        elif acao == "2":
+            nome_nota = input("Nome da nota: ")
+            conteudo = input("Conteúdo da nota: ")
+            
+            # Salvar nota em arquivo
+            nota_path = os.path.join(notes_dir, f"{nome_nota}.txt")
+            try:
+                with open(nota_path, 'w', encoding='utf-8') as f:
+                    f.write(conteudo)
+                print(f"Nota '{nome_nota}' salva com sucesso!")
+            except Exception as e:
+                print(f"Erro ao salvar nota: {e}")
+                
+        elif acao == "3":
+            # Listar notas para remoção
+            try:
+                arquivos = os.listdir(notes_dir)
+                notas_txt = [f for f in arquivos if f.endswith('.txt')]
+                
+                if not notas_txt:
+                    print("Nenhuma nota para remover.")
+                else:
+                    print("Notas disponíveis para remoção:")
+                    for i, nota_file in enumerate(notas_txt, 1):
+                        nome_nota = nota_file[:-4]
+                        print(f"{i}. {nome_nota}")
+                    
+                    escolha = input("Digite o número ou nome da nota a remover: ")
+                    
+                    # Verificar se é número
+                    if escolha.isdigit():
+                        index = int(escolha) - 1
+                        if 0 <= index < len(notas_txt):
+                            nota_a_remover = notas_txt[index]
+                        else:
+                            print("Número inválido!")
+                            continue
+                    else:
+                        # Buscar por nome
+                        nota_a_remover = f"{escolha}.txt"
+                        if nota_a_remover not in notas_txt:
+                            print("Nota não encontrada!")
+                            continue
+                    
+                    # Confirmar remoção
+                    confirmar = input(f"Tem certeza que deseja remover '{nota_a_remover[:-4]}'? (s/n): ")
+                    if confirmar.lower() == 's':
+                        nota_path = os.path.join(notes_dir, nota_a_remover)
+                        os.remove(nota_path)
+                        print("Nota removida com sucesso!")
+                        
+            except FileNotFoundError:
+                print("Diretório de notas não encontrado.")
+            except Exception as e:
+                print(f"Erro ao remover nota: {e}")
+                
+        elif acao == "4":
+            executing = False
+            
+        else:
+            print("acao invalida")
 			
 
 
@@ -402,7 +467,7 @@ def config():
 		elif opcao == "2":
 			print("info:")
 			print("nome: pyOS")
-			print("versão: v5.13")
+			print("versão: v5.14")
 			time.sleep(2)
 	else:
 		print("invalido!")

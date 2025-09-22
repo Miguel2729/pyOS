@@ -5,7 +5,15 @@ instalação(Linux)
  4. execute cd [caminho desejado para o pyOS]
  5. execute 'git clone https://github.com/Miguel2729/pyOS.git'
  fim
- 
+
+instalação(Windows):
+ 1. clique em code
+ 2. clique em download zip
+ 3. extraia o zip
+ 4. instale o python se não estiver instalado(python.org)
+ 4. entre na pasta extraída
+ 5. execute com python
+
 executar o pyOS(Linux):
  execute python pyOS.py(ou python3 pyOS.py) dentro da pasta do pyOS
  fim

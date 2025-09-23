@@ -26,3 +26,17 @@
 | com vários apps abertos + navegador | 250-400 MB |
 | máximo | 400-600 MB |
 | uso normal | 200-300 MB |
+
+## instalação rápida:
+```bash
+# instalar pacotes
+apt install git
+apt install python3
+
+# clonar os arquivos
+git clone https://github.com/Miguel2729/pyOS.git
+
+# acessar a pasta
+cd pyOS
+# executar o pyOS
+python3 pyOS.py

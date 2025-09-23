@@ -77,6 +77,10 @@ app:
 - um shell
 - um pacote
 - um sistema operacional de código fechado
+- um emulador
+- um app de máquina virtual
+- um framework
+- uma biblioteca python
 
 # dependências do pyOS
 | dependência | porque? | tipo de dependência |
@@ -112,3 +116,5 @@ O pyOS inclui um terminal **com propósito específico**:
 - **Situações educacionais** onde segurança é prioritária
 
 🔐 **Segurança + Liberdade = Você escolhe quando precisa de cada uma!**
+
+⌨️ **os comandos são os mesmos do sistema operacional hospeiro, se for Windows vai usar comandos de Windows se for Linux vai usar comandos de Linux**

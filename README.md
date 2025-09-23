@@ -1,5 +1,5 @@
-# pyOS
-## objetivo:
+# 💻 pyOS
+## 🔍 objetivo:
 - 1. ser um sistema que roda dentro de outro
 - 2. deixar sistemas operacionais com só terminal mais amigável
 
@@ -11,14 +11,14 @@
 ### git:
 - [pyOS](https://github.com/Miguel2729/pyOS.git)
 
-## funcionalidades:
+## ⚙️ funcionalidades:
 | funcionalidade/grupo de funcionalidades | descrição/mais informações |
 | --------------------------------------- | -------------------------- |
 | apps | terminal, gerenciador de tarefas, gerenciador de arquivos, calculadora, notepad, appsInstalados, também pode instalar apps |
 | sistema | processos em background, funções(hora, fechar, Python, hostsys) |
 | interface | interface gráfica baseada em texto sem ser só CLI, compatível com terminal d ide |
 
-## consumo de ram aproximado:
+## 🔴🟡🟢 consumo de ram aproximado:
 | ação | consumo |
 | ---------------------- | -------
 | em repouso | 80-150 MB |
@@ -27,7 +27,7 @@
 | máximo | 400-600 MB |
 | uso normal | 200-300 MB |
 
-## instalação rápida:
+## 📥 instalação rápida:
 ```bash
 # instalar pacotes
 apt install git
@@ -41,19 +41,19 @@ cd pyOS
 # executar o pyOS
 python3 pyOS.py
 ```
-## porque usar pyOS?:
+## ❓️ porque usar pyOS?:
 - apenas 512 MB de ram para experiência boa o pyOS precisa(no momento(5.15)
 - não é só CLI
 - tem interface gráfica baseada em texto
 - funciona em sistemas operacionais com só terminal, terminal normal e ide
 - também pode ser usado para fins educacionais
 - você pode usar ele se o sistema operacional é só o terminal e você não sabe os comandos
-### sem pyOS vs com pyOS:
+### 🆚️ sem pyOS vs com pyOS:
 | sem pyOS | com pyOS |
 | ---- | ---- |
 | só terminal | mais amigável
 | difícil de usar | fácil de usar
-### interface do pyOS copiada e colada:
+### 📺 interface do pyOS copiada e colada:
 ```text
 python-executive                 _ ⛶ X
 =python==hora==fechar==hostsys=
@@ -64,5 +64,5 @@ terminal  gerenciador de arquivos  appsInstalados
 navegador  gerenciador de tarefas
 app:
 ```
-## fotos:
+## 🖼 fotos:
 ![foto](Screenshot_20250922_235459_Termux.png) ![foto](Screenshot_20250922_235520_Termux.png) ![foto](Screenshot_20250922_235539_Termux.png) ![foto](Screenshot_20250922_235600_Termux.png)

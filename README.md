@@ -1,4 +1,5 @@
 # 💻 pyOS
+o sistema está sobe licença MIT
 ## 🔍 objetivo:
 - 1. ser um sistema que roda dentro de outro
 - 2. deixar sistemas operacionais com só terminal mais amigável
@@ -73,6 +74,9 @@ app:
 - um terminal CLI
 - uma distro Linux
 - um kernel
+- um shell
+- um pacote
+- um sistema operacional de código fechado
 
 # dependências do pyOS
 | dependência | porque? | tipo de dependência |

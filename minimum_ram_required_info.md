@@ -22,11 +22,14 @@
 | **Processos Background** | +5-10 MB cada | Gerenciador de tarefas |
 | **Múltiplos Apps** | +20-40 MB | Vários apps abertos |
 
-### **Uso Típico de RAM**
-- **Uso Básico:** 50-80 MB
-- **Uso Médio:** 80-120 MB  
-- **Uso Avançado:** 120-200 MB
-- **Uso Máximo:** 200-300 MB
+### 🔴🟡🟢 consumo de ram aproximado no uso
+| ação | consumo aproximado
+| ---------------------- | --------------- |
+| em repouso | **80-150 MB** |
+| com 1-2 apps abertos | **150-250 MB** |
+| com vários apps abertos + navegador | **250-400 MB** |
+| máximo | **400-600 MB** |
+| uso normal | **200-300 MB** |
 
 ## ⚠️ Apps que Mais Consomem RAM
 

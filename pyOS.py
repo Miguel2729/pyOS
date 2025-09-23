@@ -360,7 +360,7 @@ def notepad():
     
     executing = True
     while executing:
-        print("açoes:\n1. ver\n2. adicionar\n3. remover\n4. sair")
+        print("açoes:\n1. ver\n2. adicionar\n3. remover\n4. sair\n5. ver conteudo de nota")
         acao = input("numero da acao:")
         
         if acao == "1":
@@ -437,6 +437,10 @@ def notepad():
                 
         elif acao == "4":
             executing = False
+        elif acao == "5":
+            nota = input("nome da nota: ") 
+            with open("notes/" + nota + ".txt", 'r') as content:
+                print("conteudo:\n" content.read())
             
         else:
             print("acao invalida")
@@ -467,7 +471,7 @@ def config():
 		elif opcao == "2":
 			print("info:")
 			print("nome: pyOS")
-			print("versão: v5.14")
+			print("versão: v5.15")
 			time.sleep(2)
 	else:
 		print("invalido!")

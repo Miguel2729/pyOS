@@ -33,3 +33,41 @@ Armazena os aplicativos instalados
 ## arquivos do pyOS
 - passwordexist.txt(permissão 600): configuração que a senha foi configurada como sim ou não
 - senha.txt(permissão 600): senha
+
+# systemRes/
+- voice_input.py
+#### como usar voice_input.py:
+exemplo: 
+```python
+import voice_input
+fala = voice_input.get_voice_input()
+print(fala)
+```
+- ascii_image_display.py
+#### como usar ascii_image_display.py:
+```python
+import ascii_image_display as aid
+aid.display_ascii_image(fotos/foto1.png)
+```
+
+# como criar apps pro pyOS
+### método de script simples
+ crie um script.py e de uma URL dd download a ele
+#### instalar:
+ no appsInstalados selecione 4
+ e depois digite a url
+#### executar
+ no AppsInstalados digite 2 e depois o nome do arquivo python sem o .py
+### método de repositório github
+crie um repositório github com os arquivos do app
+#### instalar:
+ no appsInstalados digite 6 e depois a url para git clone
+#### executar
+ digite 7 e depois o nome do repositório que foi clonado
+ se der erro de arquivo não encontrado digite 8 e defina o arquivo main do app, desde que seja .py
+
+## como fazer processo em Segundo Plano no seu app
+ importe o módulo na pasta libs/(dentro de apps/ onde os apps são instalados) pyOS_proc.py. para criar o processo no código:
+ pyOS_proc.criarproc(script, nome)
+
+ - substituindo script pelo script do processo(string) e nome pelo nome do processo(também string)

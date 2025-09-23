@@ -67,9 +67,19 @@ app:
 ## 🖼 fotos:
 ![foto](Screenshot_20250922_235459_Termux.png) ![foto](Screenshot_20250922_235520_Termux.png) ![foto](Screenshot_20250922_235539_Termux.png) ![foto](Screenshot_20250922_235600_Termux.png)
 
-# o que o pyOS NÃO é:
+# 🚫 o que o pyOS NÃO é:
 - um sistema independente
 - um sistema que funciona como sistema real
 - um terminal CLI
 - uma distro Linux
 - um kernel
+
+# dependências do pyOS
+| dependência | porque? | tipo de dependência |
+| ----------------------------------- | ----------------------------------------------------- | ------------------- |
+| python 3.6 ou superior | algumas funcionalidades não funcionam se for uma versão inferior ou pode dar erros inesperados | obrigatório |
+| sistema operacional com portaudio.h | para os sistemas baseados no pyOS e apps customizados conseguirem usar a entrada de voz | opcional |
+| PIL para python | para o gerador de imagens ascii funcionar | opcional |
+| git | se for instalar apps como repositório github no pyOS, isso é nessesario | opcional |
+| no mínimo 256 MB de ram | para o sistema funcionar normalmente mais e recomendado 512 MB ou mais para não travar | obrigatório |
+| sistema hospedeiro | o pyOS não é independente | obrigatório |

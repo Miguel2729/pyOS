@@ -64,3 +64,5 @@ terminal  gerenciador de arquivos  appsInstalados
 navegador  gerenciador de tarefas
 app:
 ```
+## fotos:
+![foto](Screenshot_20250922_235459_Termux.png) ![foto](Screenshot_20250922_235520_Termux.png) ![foto](Screenshot_20250922_235539_Termux.png) ![foto](Screenshot_20250922_235600_Termux.png)

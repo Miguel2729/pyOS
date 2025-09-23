@@ -83,3 +83,28 @@ app:
 | git | se for instalar apps como repositório github no pyOS, isso é nessesario | opcional |
 | no mínimo 256 MB de ram | para o sistema funcionar normalmente mais e recomendado 512 MB ou mais para não travar | obrigatório |
 | sistema hospedeiro | o pyOS não é independente | obrigatório |
+
+## 🔄 Terminal Integrado - Por que não é redundante?
+
+O pyOS inclui um terminal **com propósito específico**:
+
+### 🎯 **Não é "mais um terminal" - é uma "porta segura" para o shell!**
+
+| pyOS Terminal | Terminal Host Convencional |
+|---------------|----------------------------|
+| ✅ **Navegação controlada** - Acessa qualquer diretório (exceto sensíveis) | ⚠️ **Acesso total** - Inclusive a áreas críticas do sistema |
+| ✅ **Comandos úteis liberados** - `cd`, `ls`, `python -m http.server`, etc. | ⚠️ **Todos os comandos** - Inclusive os perigosos |
+| 🛡️ **Proteção automática** - Bloqueia comandos perigosos (sudo, apt, etc.) | ❌ **Sem proteção** - Usuário assume todos os riscos |
+| 🔄 **Volta fácil** - Terminal host sempre disponível quando precisar | 🔒 **Única opção** - Se errar, pode danificar o sistema |
+
+### 💡 **Como funciona na prática:**
+- **No pyOS**: Digite `terminal` → Use com segurança → Volte ao menu principal
+- **Fora do pyOS**: Use o terminal convencional quando precisar de total controle
+- **Sair do Terminal**: Digite quit como comando no terminal
+
+### 🎮 **Perfect para:**
+- **Iniciantes** que estão aprendendo comandos
+- **Uso rápido** sem risco de acidentes  
+- **Situações educacionais** onde segurança é prioritária
+
+🔐 **Segurança + Liberdade = Você escolhe quando precisa de cada uma!**

@@ -66,3 +66,10 @@ app:
 ```
 ## 🖼 fotos:
 ![foto](Screenshot_20250922_235459_Termux.png) ![foto](Screenshot_20250922_235520_Termux.png) ![foto](Screenshot_20250922_235539_Termux.png) ![foto](Screenshot_20250922_235600_Termux.png)
+
+# o que o pyOS NÃO é:
+- um sistema independente
+- um sistema que funciona como sistema real
+- um terminal CLI
+- uma distro Linux
+- um kernel

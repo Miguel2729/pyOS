@@ -81,6 +81,7 @@ app:
 - um app de máquina virtual
 - um framework
 - uma biblioteca python
+- uma simulação
 
 # dependências do pyOS
 | dependência | porque? | tipo de dependência |

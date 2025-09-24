@@ -440,7 +440,7 @@ def notepad():
         elif acao == "5":
             nota = input("nome da nota: ") 
             with open("notes/" + nota + ".txt", 'r') as content:
-                print("conteudo:\n" content.read())
+                print("conteudo:\n" + content.read())
             
         else:
             print("acao invalida")

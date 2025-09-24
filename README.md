@@ -102,7 +102,7 @@ O pyOS inclui um terminal **com propósito específico**:
 |---------------|----------------------------|
 | ✅ **Navegação controlada** - Acessa qualquer diretório (exceto sensíveis) | ⚠️ **Acesso total** - Inclusive a áreas críticas do sistema |
 | ✅ **Comandos úteis liberados** - `cd`, `ls`, `python -m http.server`, etc. | ⚠️ **Todos os comandos** - Inclusive os perigosos |
-| 🛡️ **Proteção automática** - Bloqueia comandos perigosos (sudo, apt, etc.) | ❌ **Sem proteção** - Usuário assume todos os riscos |
+| 🛡️ **Proteção automática** - Bloqueia comandos perigosos | ❌ **Sem proteção** - Usuário assume todos os riscos |
 | 🔄 **Volta fácil** - Terminal host sempre disponível quando precisar | 🔒 **Única opção** - Se errar, pode danificar o sistema |
 
 ### 💡 **Como funciona na prática:**

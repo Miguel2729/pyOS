@@ -68,7 +68,7 @@ app:
 ## 🖼 fotos:
 ![foto](Screenshot_20250922_235459_Termux.png) ![foto](Screenshot_20250922_235520_Termux.png) ![foto](Screenshot_20250922_235539_Termux.png) ![foto](Screenshot_20250922_235600_Termux.png)
 
-# 🚫 o que o pyOS NÃO é:
+## 🚫 o que o pyOS NÃO é:
 - um sistema independente
 - um sistema que funciona como sistema real
 - um terminal CLI
@@ -83,7 +83,7 @@ app:
 - uma biblioteca python
 - uma simulação
 
-# dependências do pyOS
+## dependências do pyOS
 | dependência | porque? | tipo de dependência |
 | ----------------------------------- | ----------------------------------------------------- | ------------------- |
 | python 3.6 ou superior | algumas funcionalidades não funcionam se for uma versão inferior ou pode dar erros inesperados | obrigatório |
@@ -124,3 +124,11 @@ O pyOS inclui um terminal **com propósito específico**:
 - pyOS fica muito cru
 - python-executive foi inspirado no MS-DOS executive do Windows 1.0
 - não é recomendado chamar o pyOS de python-executive porque esse não nem seu apelido, nem nome e nem segundo nome, pyOS é mais preciso 
+
+## terminal puro vs pyOS vs shell gráfico
+| Feature | Terminal Puro | pyOS | GUI Completa |
+|---------|---------------|------|--------------|
+| **Facilidade de uso** | ❌ Difícil | ✅ **Fácil** | ✅ Fácil |
+| **Requisitos sistema** | ✅ Mínimos | ✅ **Mínimos** | ❌ Altos |
+| **Instalação** | ✅ Já incluso | ✅ **Simples** | ⚠️ Complexa |
+| **Estabilidade** | ✅ Máxima | ✅ **Alta** | ⚠️ Variável |

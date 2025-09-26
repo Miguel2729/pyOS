@@ -15,28 +15,29 @@
 ### **Memória Necessária por Componente**
 | Componente | RAM Consumida | Observações |
 |------------|---------------|-------------|
-| **pyOS Core** | 25-40 MB | Sistema básico + interface |
-| **Apps Básicos** | +10-20 MB | Calculadora, Notepad, Config |
-| **Terminal/File Manager** | +15-25 MB | Operações de sistema |
-| **Navegador TUI** | +30-50 MB | 🔥 **Mais pesado** |
-| **Processos Background** | +5-10 MB cada | Gerenciador de tarefas |
-| **Múltiplos Apps** | +20-40 MB | Vários apps abertos |
+| **pyOS Core** | 30-50 MB | Sistema básico + interface |
+| **Apps Básicos** | +10-25 MB | Calculadora, Notepad, Config |
+| **Terminal/File Manager** | +20-35 MB | Operações de sistema |
+| **Navegador TUI** | +40-70 MB | 🔥 **Mais pesado** |
+| **Processos Background** | +8-15 MB cada | Gerenciador de tarefas |
+| **Múltiplos Apps** | +30-60 MB | Vários apps abertos |
 
 ### 🔴🟡🟢 consumo de ram aproximado no uso
-| ação | consumo aproximado
+| ação | consumo aproximado |
 | ---------------------- | --------------- |
-| em repouso | **80-150 MB** |
-| com 1-2 apps abertos | **150-250 MB** |
-| com vários apps abertos + navegador | **250-400 MB** |
-| máximo | **400-600 MB** |
-| uso normal | **200-300 MB** |
+| em repouso | **90-160 MB** |
+| com 1-2 apps abertos | **160-280 MB** |
+| com vários apps abertos + navegador | **280-550 MB** |
+| máximo | **400-650 MB** |
+| uso normal | **220-380 MB** |
 
 ## ⚠️ Apps que Mais Consomem RAM
 
 ### **🔥 Alto Consumo (Evitar em RAM limitada)**
 1. **Navegador TUI** - BeautifulSoup + requests
-2. **Gerenciador de Arquivos** - Com muitos arquivos
-3. **Apps Externos Complexos** - Dependências pesadas
+2. **App de Mensagens** - Sockets + threads
+3. **Gerenciador de Arquivos** - Com muitos arquivos
+4. **Apps Externos Complexos** - Dependências pesadas
 
 ### **💚 Baixo Consumo (Seguros)**
 - Calculadora

@@ -10,15 +10,69 @@ except ModuleNotFoundError:
 	except ModuleNotFoundError:
 		print("erro as instalar")
 		quit()
+import time
+import random
+import json
+import socket
 import re
 import sys
+from datetime import datetime
 import importlib
 import subprocess
 import time
 import threading
-import socket
-import json
-from datetime import datetime
+import shutil
+import traceback
+
+def criar_barra(msg):
+	print(f'{msg}                  {pyOS_system.winbtn}')
+
+def exception_handler(exc_type, exc_value, exc_traceback):
+    if issubclass(exc_type, KeyboardInterrupt):
+        sys.__excepthook__(exc_type, exc_value, exc_traceback)
+        return
+    
+    
+    # Primeiro limpa a tela
+    os.system('cls' if os.name == 'nt' else 'clear')
+    
+    # depois chama a função criar_barra
+    criar_barra("system error")
+    
+    # Deleta pastas dentro de ./pyOS/proc
+    proc_path = "./pyOS/proc"
+    if os.path.exists(proc_path):
+        for item in os.listdir(proc_path):
+            item_path = os.path.join(proc_path, item)
+            if os.path.isdir(item_path):
+                try: 
+                    shutil.rmtree(item_path)
+                except: 
+                    pass
+    
+    # Printa o erro
+    print("⚠️ " + str(exc_value))
+    
+    # Menu de opções
+    print("[1] reiniciar o sistema | [2] desligar o sistema")
+    
+    while True:
+        try:
+            opcao = input("Opção: ").strip()
+            if opcao == "1":
+                python = sys.executable
+                os.execl(python, python, *sys.argv)
+            elif opcao == "2":
+                print("Desligando o sistema...")
+                quit()
+            else:
+                print("Opção inválida! Digite 1 ou 2.")
+        except (KeyboardInterrupt, EOFError):
+            print("\nDesligando o sistema...")
+            quit()
+
+sys.excepthook = exception_handler
+
 os.system("apt install git")
 if not os.path.exists("passwordexist.txt"):
 	senhaconfig01 = input("definir senha?(s/n)")
@@ -66,7 +120,7 @@ except ModuleNotFoundError:
 		
 # inicialização
 init()
-pyOSdir = os.getcwd
+pyOSdir = os.getcwd()
 colorconfig = Fore.WHITE
 processos_ativos = {}
 os.chdir("./")
@@ -473,7 +527,7 @@ def config():
 		elif opcao == "2":
 			print("info:")
 			print("nome: pyOS")
-			print("versão: v5.16")
+			print("versão: v5.17")
 			time.sleep(2)
 	else:
 		print("invalido!")
@@ -974,7 +1028,6 @@ def taskmgr():
         # Sempre retorna ao diretório original
         os.chdir(diretorio_original)
         time.sleep(2)
-
 def messages():
     """
     App de mensagens em rede - usuários podem conversar de qualquer lugar

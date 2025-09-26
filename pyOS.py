@@ -190,9 +190,9 @@ def instalar_hostsys():
 	diroriginal = os.getcwd()
 	os.chdir("./pyOS/system/hostsys")
 	with open("restart.sh", 'w') as restart_sys:
-		restart_sys.write('#!/bin/bash\nclear\ninit 6')
+		restart_sys.write('#!/bin/bash\nclear\nreboot')
 	with open("shutdown.sh", 'w') as quit_sys:
-		quit_sys.write("#!/bin/bash\nclear\ninit 0")
+		quit_sys.write("#!/bin/bash\nclear\npoweroff")
 		os.chdir(diroriginal)
 	
 def gerar_recursos_sistema():
@@ -527,7 +527,7 @@ def config():
 		elif opcao == "2":
 			print("info:")
 			print("nome: pyOS")
-			print("versão: v5.17")
+			print("versão: v5.18")
 			time.sleep(2)
 	else:
 		print("invalido!")

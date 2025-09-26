@@ -20,13 +20,13 @@ o sistema está sobe licença MIT
 | interface | interface gráfica baseada em texto sem ser só CLI, compatível com terminal d ide |
 
 ## 🔴🟡🟢 consumo de ram aproximado:
-| ação | consumo |
-| ---------------------- | -------
-| em repouso | 80-150 MB |
-| com 1-2 apps abertos | 150-250 MB |
-| com vários apps abertos + navegador | 250-400 MB |
-| máximo | 400-600 MB |
-| uso normal | 200-300 MB |
+| ação | consumo aproximado |
+| ---------------------- | --------------- |
+| em repouso | **90-160 MB** |
+| com 1-2 apps abertos | **160-280 MB** |
+| com vários apps abertos + navegador | **280-550 MB** |
+| máximo | **400-650 MB** |
+| uso normal | **220-380 MB** |
 
 ## 📥 instalação rápida:
 ```bash

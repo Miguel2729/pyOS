@@ -1,4 +1,4 @@
-# 🛠 Manual de Instalação e Uso — pyOS v5.14
+# 🛠 Manual de Instalação e Uso — pyOS v5.16
 
 ## 📥 Instalação
 
@@ -49,6 +49,7 @@
   2. Adicionar nova nota
   3. Remover nota existente
   4. Sair
+  5. ver conteudo de nota
 
 #### 3. ⚙️ Configurações
 - Digite `config` para abrir
@@ -104,7 +105,9 @@
 - Digite `gerenciador de tarefas` para abrir
 - Visualize e encerre processos
 - Monitoramento automático
-
+#### 9.mensagens
+- Digite `mensagens` para abrir
+- sistema de mensagens
 ---
 
 ## 🔧 Funções Especiais

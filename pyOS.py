@@ -10,13 +10,15 @@ except ModuleNotFoundError:
 	except ModuleNotFoundError:
 		print("erro as instalar")
 		quit()
-import time
 import re
 import sys
 import importlib
 import subprocess
 import time
 import threading
+import socket
+import json
+from datetime import datetime
 os.system("apt install git")
 if not os.path.exists("passwordexist.txt"):
 	senhaconfig01 = input("definir senha?(s/n)")
@@ -471,7 +473,7 @@ def config():
 		elif opcao == "2":
 			print("info:")
 			print("nome: pyOS")
-			print("versão: v5.15")
+			print("versão: v5.16")
 			time.sleep(2)
 	else:
 		print("invalido!")
@@ -973,6 +975,380 @@ def taskmgr():
         os.chdir(diretorio_original)
         time.sleep(2)
 
+def messages():
+    """
+    App de mensagens em rede - usuários podem conversar de qualquer lugar
+    """
+    
+    # Arquivos de armazenamento
+    MSGS_FILE = "msgs.json"
+    USERS_FILE = "name_user.txt"
+    
+    # Configurações do servidor
+    HOST = '0.0.0.0'  # Escuta em todas as interfaces
+    PORT = 12345
+    server_socket = None
+    clients = {}  # {client_socket: {'id': id, 'name': name}}
+    
+    def inicializar_arquivos():
+        """Inicializa os arquivos se não existirem"""
+        if not os.path.exists(MSGS_FILE):
+            with open(MSGS_FILE, 'w') as f:
+                json.dump({}, f)
+        
+        if not os.path.exists(USERS_FILE):
+            with open(USERS_FILE, 'w') as f:
+                f.write("")
+    
+    def gerar_id():
+        """Gera um ID único para o usuário"""
+        return random.randint(1000, 9999)
+    
+    def carregar_usuarios():
+        """Carrega os usuários do arquivo"""
+        try:
+            with open(USERS_FILE, 'r') as f:
+                linhas = f.readlines()
+            
+            usuarios = {}
+            for linha in linhas:
+                if linha.strip():
+                    id_user, nome = linha.strip().split('|')
+                    usuarios[int(id_user)] = nome
+            return usuarios
+        except:
+            return {}
+    
+    def salvar_usuario(id_user, nome):
+        """Salva um novo usuário"""
+        with open(USERS_FILE, 'a') as f:
+            f.write(f"{id_user}|{nome}\n")
+    
+    def carregar_mensagens():
+        """Carrega todas as mensagens"""
+        try:
+            with open(MSGS_FILE, 'r') as f:
+                return json.load(f)
+        except:
+            return {}
+    
+    def salvar_mensagens(mensagens):
+        """Salva todas as mensagens"""
+        with open(MSGS_FILE, 'w') as f:
+            json.dump(mensagens, f, indent=2)
+    
+    def adicionar_mensagem(remetente_id, destinatario_id, mensagem):
+        """Adiciona uma nova mensagem"""
+        mensagens = carregar_mensagens()
+        
+        chave = f"{min(remetente_id, destinatario_id)}_{max(remetente_id, destinatario_id)}"
+        
+        if chave not in mensagens:
+            mensagens[chave] = []
+        
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        mensagens[chave].append({
+            'remetente': remetente_id,
+            'mensagem': mensagem,
+            'timestamp': timestamp
+        })
+        
+        salvar_mensagens(mensagens)
+        return mensagens[chave]
+    
+    def obter_mensagens(user1_id, user2_id):
+        """Obtém mensagens entre dois usuários"""
+        mensagens = carregar_mensagens()
+        chave = f"{min(user1_id, user2_id)}_{max(user1_id, user2_id)}"
+        
+        if chave in mensagens:
+            return mensagens[chave]
+        return []
+    
+    def iniciar_servidor():
+        """Inicia o servidor de mensagens"""
+        global server_socket
+        
+        server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        
+        try:
+            server_socket.bind((HOST, PORT))
+            server_socket.listen(5)
+            print(f"🚀 Servidor iniciado em {HOST}:{PORT}")
+            print("Aguardando conexões...")
+            
+            while True:
+                client_socket, addr = server_socket.accept()
+                print(f"✅ Nova conexão de {addr}")
+                
+                # Thread para lidar com o cliente
+                client_thread = threading.Thread(
+                    target=handle_client, 
+                    args=(client_socket, addr)
+                )
+                client_thread.daemon = True
+                client_thread.start()
+                
+        except Exception as e:
+            print(f"❌ Erro no servidor: {e}")
+    
+    def handle_client(client_socket, addr):
+        """Lida com as mensagens de um cliente"""
+        try:
+            # Receber dados de login
+            login_data = client_socket.recv(1024).decode('utf-8')
+            user_id, user_name = login_data.split('|')
+            user_id = int(user_id)
+            
+            clients[client_socket] = {'id': user_id, 'name': user_name}
+            print(f"👤 {user_name} (ID: {user_id}) conectado")
+            
+            # Enviar confirmação
+            client_socket.send("CONNECTED".encode('utf-8'))
+            
+            while True:
+                # Receber mensagem do cliente
+                data = client_socket.recv(1024).decode('utf-8')
+                if not data:
+                    break
+                
+                if data.startswith("GET_MSGS|"):
+                    # Cliente solicitando mensagens
+                    destinatario_id = int(data.split('|')[1])
+                    mensagens = obter_mensagens(user_id, destinatario_id)
+                    client_socket.send(json.dumps(mensagens).encode('utf-8'))
+                
+                elif data.startswith("SEND_MSG|"):
+                    # Cliente enviando mensagem
+                    partes = data.split('|')
+                    destinatario_id = int(partes[1])
+                    mensagem = partes[2]
+                    
+                    adicionar_mensagem(user_id, destinatario_id, mensagem)
+                    client_socket.send("MSG_SENT".encode('utf-8'))
+                    
+                    # Notificar destinatário se estiver online
+                    notify_destinatario(user_id, destinatario_id, mensagem)
+                
+                elif data == "LIST_USERS":
+                    # Listar usuários
+                    usuarios = carregar_usuarios()
+                    client_socket.send(json.dumps(usuarios).encode('utf-8'))
+                
+        except Exception as e:
+            print(f"❌ Erro com cliente {addr}: {e}")
+        finally:
+            if client_socket in clients:
+                print(f"👋 {clients[client_socket]['name']} desconectou")
+                del clients[client_socket]
+            client_socket.close()
+    
+    def notify_destinatario(remetente_id, destinatario_id, mensagem):
+        """Notifica o destinatário sobre nova mensagem"""
+        for client, info in clients.items():
+            if info['id'] == destinatario_id:
+                try:
+                    client.send(f"NEW_MSG|{remetente_id}|{mensagem}".encode('utf-8'))
+                except:
+                    pass
+    
+    def conectar_como_cliente():
+        """Conecta como cliente ao servidor"""
+        try:
+            server_host = input("Digite o IP do servidor (ou Enter para localhost): ").strip()
+            if not server_host:
+                server_host = 'localhost'
+            
+            client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            client_socket.connect((server_host, PORT))
+            
+            # Login
+            usuarios = carregar_usuarios()
+            
+            if not usuarios:
+                print("❌ Nenhum usuário cadastrado localmente!")
+                return
+            
+            print("\n📋 Seus usuários locais:")
+            for id_user, nome in usuarios.items():
+                print(f"   ID: {id_user} - Nome: {nome}")
+            
+            try:
+                user_id = int(input("\nDigite seu ID: "))
+                if user_id not in usuarios:
+                    print("❌ ID não encontrado!")
+                    return
+            except ValueError:
+                print("❌ ID inválido!")
+                return
+            
+            # Enviar dados de login
+            login_data = f"{user_id}|{usuarios[user_id]}"
+            client_socket.send(login_data.encode('utf-8'))
+            
+            # Aguardar confirmação
+            response = client_socket.recv(1024).decode('utf-8')
+            if response == "CONNECTED":
+                print(f"✅ Conectado como {usuarios[user_id]}!")
+                menu_cliente(client_socket, user_id, usuarios[user_id])
+            else:
+                print("❌ Falha na conexão!")
+                
+        except Exception as e:
+            print(f"❌ Erro ao conectar: {e}")
+    
+    def menu_cliente(client_socket, user_id, user_name):
+        """Menu do cliente conectado"""
+        while True:
+            print("\n" + "="*50)
+            print(f"🌟 CHAT - {user_name} (ID: {user_id})")
+            print("="*50)
+            print("1. Conversar com usuário")
+            print("2. Atualizar lista de usuários")
+            print("3. Sair")
+            
+            opcao = input("\nDigite sua opção: ").strip()
+            
+            if opcao == '1':
+                chat_usuario(client_socket, user_id, user_name)
+            elif opcao == '2':
+                listar_usuarios_online(client_socket)
+            elif opcao == '3':
+                print("👋 Saindo...")
+                break
+            else:
+                print("❌ Opção inválida!")
+    
+    def listar_usuarios_online(client_socket):
+        """Lista usuários online no servidor"""
+        try:
+            client_socket.send("LIST_USERS".encode('utf-8'))
+            data = client_socket.recv(4096).decode('utf-8')
+            usuarios = json.loads(data)
+            
+            print("\n📋 Usuários disponíveis:")
+            for id_user, nome in usuarios.items():
+                print(f"   ID: {id_user} - Nome: {nome}")
+                
+        except Exception as e:
+            print(f"❌ Erro ao listar usuários: {e}")
+    
+    def chat_usuario(client_socket, user_id, user_name):
+        """Interface de chat com outro usuário"""
+        try:
+            destinatario_id = int(input("\nDigite o ID do usuário para conversar: "))
+            
+            print(f"\n💬 Conversando... (Digite '/quit' para sair)")
+            print("-" * 50)
+            
+            # Thread para receber mensagens em tempo real
+            recebendo = True
+            
+            def receber_mensagens():
+                while recebendo:
+                    try:
+                        client_socket.settimeout(1.0)
+                        data = client_socket.recv(1024).decode('utf-8')
+                        if data.startswith("NEW_MSG|"):
+                            partes = data.split('|')
+                            remetente_id = int(partes[1])
+                            mensagem = partes[2]
+                            print(f"\n💬 Nova mensagem de {remetente_id}: {mensagem}")
+                            print("Digite sua mensagem: ", end="")
+                    except socket.timeout:
+                        continue
+                    except:
+                        break
+            
+            receiver_thread = threading.Thread(target=receber_mensagens)
+            receiver_thread.daemon = True
+            receiver_thread.start()
+            
+            # Carregar histórico
+            client_socket.send(f"GET_MSGS|{destinatario_id}".encode('utf-8'))
+            historico_data = client_socket.recv(4096).decode('utf-8')
+            historico = json.loads(historico_data)
+            
+            for msg in historico:
+                timestamp = msg['timestamp']
+                remetente = msg['remetente']
+                print(f"[{timestamp}] {remetente}: {msg['mensagem']}")
+            
+            # Loop de envio de mensagens
+            while True:
+                mensagem = input("Você: ").strip()
+                
+                if mensagem.lower() == '/quit':
+                    recebendo = False
+                    break
+                elif mensagem:
+                    client_socket.send(f"SEND_MSG|{destinatario_id}|{mensagem}".encode('utf-8'))
+                    response = client_socket.recv(1024).decode('utf-8')
+                    if response == "MSG_SENT":
+                        print("✅ Mensagem enviada!")
+                
+        except Exception as e:
+            print(f"❌ Erro no chat: {e}")
+    
+    def criar_usuario_local():
+        """Cria um novo usuário local"""
+        nome = input("Digite seu nome: ").strip()
+        if not nome:
+            print("Nome não pode estar vazio!")
+            return
+        
+        usuarios = carregar_usuarios()
+        
+        # Gerar ID único
+        while True:
+            id_user = gerar_id()
+            if id_user not in usuarios:
+                break
+        
+        salvar_usuario(id_user, nome)
+        print(f"\n✅ Usuário criado com sucesso!")
+        print(f"📋 Seus dados:")
+        print(f"   ID: {id_user}")
+        print(f"   Nome: {nome}")
+        print("\n⚠️  Anote seu ID, você precisará dele para conectar!")
+    
+    def menu_principal():
+        """Menu principal do app"""
+        inicializar_arquivos()
+        
+        while True:
+            print("\n" + "="*50)
+            print("🌟 APP DE MENSAGENS EM REDE")
+            print("="*50)
+            print("1. Iniciar como SERVIDOR (hospedar chat)")
+            print("2. Conectar como CLIENTE (entrar no chat)")
+            print("3. Criar usuário local")
+            print("4. Sair")
+            
+            opcao = input("\nDigite sua opção: ").strip()
+            
+            if opcao == '1':
+                print("\n🎯 Iniciando servidor...")
+                print("⚠️  Compartilhe seu IP para outros se conectarem")
+                iniciar_servidor()
+                
+            elif opcao == '2':
+                print("\n🔌 Conectando como cliente...")
+                conectar_como_cliente()
+                
+            elif opcao == '3':
+                criar_usuario_local()
+                
+            elif opcao == '4':
+                print("👋 Saindo do app...")
+                break
+            else:
+                print("❌ Opção inválida!")
+    
+    # Iniciar o app
+    menu_principal()
+
 def abrirapp(app):
 	os.system("clear")
 	try:
@@ -1018,7 +1394,8 @@ apps = {
 	"gerenciador de arquivos": fileManager,
 	"appsInstalados": appsInstalados,
 	"navegador": navegador_tui,
-	"gerenciador de tarefas": taskmgr
+	"gerenciador de tarefas": taskmgr,
+	"mensagens": messages
 }
 # Inicie a thread de verificação de processos
 thread_processos = threading.Thread(target=verificar_processos_background, daemon=True)

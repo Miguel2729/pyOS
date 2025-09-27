@@ -92,6 +92,7 @@ app:
 | git | se for instalar apps como repositório github no pyOS, isso é nessesario | opcional |
 | no mínimo 256 MB de ram | para o sistema funcionar normalmente mais e recomendado 512 MB ou mais para não travar | obrigatório |
 | sistema hospedeiro | o pyOS não é independente | obrigatório |
+| PIL para python | para o app "fotos" funcionar | opcional |
 
 ## 🔄 Terminal Integrado - Por que não é redundante?
 

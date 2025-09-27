@@ -1,4 +1,4 @@
-# 🛠 Manual de Instalação e Uso — pyOS v5.18
+# 🛠 Manual de Instalação e Uso — pyOS v5.19
 
 ## 📥 Instalação
 
@@ -105,9 +105,24 @@
 - Digite `gerenciador de tarefas` para abrir
 - Visualize e encerre processos
 - Monitoramento automático
-#### 9.mensagens
+#### 9. 💬 mensagens
 - Digite `mensagens` para abrir
 - sistema de mensagens
+-Opções:
+ 1. hospeda uma conversa
+ 2. entra numa conversa
+ 3. cria um usuário
+ 4. sai
+#### 10. 🖼 fotos
+- Digite `fotos` para abrir
+- para ver suas fotos
+- Armazene as fotos em imgs/
+- Opções:
+  - 1 ve as fotos,
+  - 2 visualiza foto,
+  - 0 sai
+
+
 ---
 
 ## 🔧 Funções Especiais

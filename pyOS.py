@@ -1414,6 +1414,9 @@ def images():
 	elif escolha == "2":
 		caminho = "imgs/"+ input("foto(apenas o arquivo nome com extensão): ")
 		aid.display_ascii_image(caminho)
+		input("aperte enter para sair")
+	elif escolha == "0":
+		return
 		
 def abrirapp(app):
 	os.system("clear")

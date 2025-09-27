@@ -527,7 +527,7 @@ def config():
 		elif opcao == "2":
 			print("info:")
 			print("nome: pyOS")
-			print("versão: v5.18")
+			print("versão: v5.19")
 			time.sleep(2)
 	else:
 		print("invalido!")
@@ -1402,6 +1402,19 @@ def messages():
     # Iniciar o app
     menu_principal()
 
+def images():
+	sys.path.insert(0, "./pyOS/systemRes")
+	import ascii_image_display as aid
+	print("1. ver fotos\n2. visualizar fotos\n0. sair")
+	escolha = input("escolha: ")
+	if escolha == "1":
+		os.chdir("imgs/")
+		os.listdir()
+		os.chdir("..")
+	elif escolha == "2":
+		caminho = "imgs/"+ input("foto(apenas o arquivo nome com extensão): ")
+		aid.display_ascii_image(caminho)
+		
 def abrirapp(app):
 	os.system("clear")
 	try:
@@ -1448,7 +1461,8 @@ apps = {
 	"appsInstalados": appsInstalados,
 	"navegador": navegador_tui,
 	"gerenciador de tarefas": taskmgr,
-	"mensagens": messages
+	"mensagens": messages,
+	"fotos": images
 }
 # Inicie a thread de verificação de processos
 thread_processos = threading.Thread(target=verificar_processos_background, daemon=True)

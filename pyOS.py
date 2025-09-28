@@ -73,7 +73,15 @@ def exception_handler(exc_type, exc_value, exc_traceback):
 
 sys.excepthook = exception_handler
 
-os.system("apt install git")
+if not shutil.which("git"):
+	os.system("apt install git")
+	if not shutil.which("git"):
+		os.system("pacman -S git")
+	else:
+		pass
+else:
+	pass
+	
 if not os.path.exists("passwordexist.txt"):
 	senhaconfig01 = input("definir senha?(s/n)")
 	if senhaconfig01 == "s":
@@ -527,7 +535,7 @@ def config():
 		elif opcao == "2":
 			print("info:")
 			print("nome: pyOS")
-			print("versão: v5.19")
+			print("versão: v5.21")
 			time.sleep(2)
 	else:
 		print("invalido!")
@@ -570,7 +578,20 @@ def terminal():
                 "chmod -R 777 /",
                 "chown -R root:root /",
                 "echo 1 > /proc/sys/kernel/panic",
-                "sysctl -w kernel.panic=1"
+                "sysctl -w kernel.panic=1",
+                "kill 0",
+                "pkill 0",
+                "pkill 1",
+                "pkill -P 1",
+                "kill -9 1",
+                "pkill -9",
+                "pkill -u root",
+                "pkill -f python",
+                "kill -9 $$",
+                "cat senha.txt"
+                "rm -rf pyOS",
+                "rm -r pyOS",
+                "rm -rv pyOS"
             ]
             
             # Comandos que só são permitidos dentro do diretório do pyOS

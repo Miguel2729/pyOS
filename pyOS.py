@@ -23,6 +23,7 @@ import time
 import threading
 import shutil
 import traceback
+version = "v5.22"
 
 def criar_barra(msg):
 	print(f'{msg}                  {pyOS_system.winbtn}')
@@ -535,12 +536,13 @@ def config():
 		elif opcao == "2":
 			print("info:")
 			print("nome: pyOS")
-			print("versão: v5.21")
+			print(f"versão: {version}")
 			time.sleep(2)
 	else:
 		print("invalido!")
 		
 def terminal():
+    global apps
     executing = True
     while executing:
         diret = os.getcwd()
@@ -552,6 +554,8 @@ def terminal():
         elif coman.startswith("cd "):
             dire = coman[3:]
             os.chdir(dire)
+        elif coman == "unlock_sys":
+            apps["system-mgr"] = sysmgr
             
         else:
             # Lista de comandos perigosos bloqueados
@@ -1438,7 +1442,63 @@ def images():
 		input("aperte enter para sair")
 	elif escolha == "0":
 		return
+
 		
+
+
+
+def sysmgr():
+	print(f"pyOS {version} - {os.getcwd}")
+	while True:
+		print("1. permissoes\n2. senha\n3. arquivos temp.\n4. processos\n0. sair\n")
+		esco = input("numero da opçao: ")
+		if esco == "1":
+			diret = input("diretorio/arquivo: ")
+			perm = input("permissão(chmod): ")
+			recur = input("recursivo?(s/n): ")
+			if recur == "s":
+				os.system(f"chmod -R {perm} {diret}")
+			else:
+				os.system(f"chmod {perm} {diret}")
+		elif esco == "2":
+			print("1. alterar\n2. alterar configuracao\n")
+			esco2 = input("escolha: ")
+			if esco2 == "1":
+				with open("senha.txt", "w") as senha:
+					senha.write(input("nova senha: "))
+			elif esco2 == "2":
+				with open("passwordexist.txt", "w") as newcfg:
+					esco2_2 = input("s/n: ")
+					if esco2_2 == "s":
+						newcfg.write("True")
+					else:
+						newcfg.write("False")
+		elif esco == "3":
+			print(os.listdir("./pyOS/system/tmp"))
+		elif esco == "4":
+			print(str(os.listdir("./pyOS/proc")) + "\n")
+			print("1. matar\n2. editar pid\n3. editar nome\n0. sair\n")
+			esco3 = input("escolha: ")
+			if esco3 == "1":
+				pid = input("pid: ")
+				shutil.rmtree("./pyOS/proc/" + pid)
+			elif esco3 == "2":
+				pid_at = input("pid: ")
+				pid_no = input("novo pid: ")
+				os.rename("./pyOS/proc/" + pid_at, "./pyOS/proc/" + pid_no)
+			elif esco3 == "3":
+				pid = input("pid: ")
+				with open("./pyOS/proc/" + pid + "/" + "nome.txt", "w") as name:
+					name.write(input("nome novo: "))
+			elif esco3 == "0":
+				pass
+		elif esco == "0":
+			break
+				
+			
+			
+			
+			
 def abrirapp(app):
 	os.system("clear")
 	try:

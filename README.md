@@ -15,9 +15,9 @@ o sistema está sobe licença MIT
 ## ⚙️ funcionalidades:
 | funcionalidade/grupo de funcionalidades | descrição/mais informações |
 | --------------------------------------- | -------------------------- |
-| apps | terminal, gerenciador de tarefas, gerenciador de arquivos, calculadora, notepad, appsInstalados, também pode instalar apps |
+| apps | terminal, gerenciador de tarefas, gerenciador de arquivos, calculadora, notepad, appsInstalados, navegador, mensagens, gerenciador de tarefas, fotos, também pode instalar apps |
 | sistema | processos em background, funções(hora, fechar, Python, hostsys) |
-| interface | interface gráfica baseada em texto sem ser só CLI, compatível com terminal d ide |
+| interface | interface gráfica baseada em texto sem ser só CLI, compatível com terminal e ide |
 
 ## 🔴🟡🟢 consumo de ram aproximado:
 | ação | consumo aproximado |
@@ -47,7 +47,7 @@ python3 pyOS.py
 - não é só CLI
 - tem interface gráfica baseada em texto
 - funciona em sistemas operacionais com só terminal, terminal normal e ide
-- também pode ser usado para fins educacionais
+- também pode ser usado para fins educacionais(mais não é o objetivo)
 - você pode usar ele se o sistema operacional é só o terminal e você não sabe os comandos
 ### 🆚️ sem pyOS vs com pyOS:
 | sem pyOS | com pyOS |
@@ -82,6 +82,9 @@ app:
 - um framework
 - uma biblioteca python
 - uma simulação
+
+## ✅️ o que é?
+- uma interface gráfica baseada em texto que roda por cima do terminal sem precisar decorar comandos e que tem algumas(algumas  não todas) funcionalidades de SO
 
 ## dependências do pyOS
 | dependência | porque? | tipo de dependência |

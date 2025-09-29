@@ -1448,7 +1448,7 @@ def images():
 
 
 def sysmgr():
-	print(f"pyOS {version} - {os.getcwd}")
+	print(f"pyOS {version} - {os.getcwd()}")
 	while True:
 		print("1. permissoes\n2. senha\n3. arquivos temp.\n4. processos\n0. sair\n")
 		esco = input("numero da opçao: ")
@@ -1488,7 +1488,7 @@ def sysmgr():
 				os.rename("./pyOS/proc/" + pid_at, "./pyOS/proc/" + pid_no)
 			elif esco3 == "3":
 				pid = input("pid: ")
-				with open("./pyOS/proc/" + pid + "/" + "nome.txt", "w") as name:
+				with open(f"./pyOS/proc/{pid}/nome.txt", "w") as name:
 					name.write(input("nome novo: "))
 			elif esco3 == "0":
 				pass

@@ -23,7 +23,8 @@ import time
 import threading
 import shutil
 import traceback
-version = "v5.22"
+version = "v5.24"
+versionparts = [5, 24]
 
 def criar_barra(msg):
 	print(f'{msg}                  {pyOS_system.winbtn}')
@@ -174,6 +175,7 @@ def criarproc(script, nome):
 	# Cria diretório do processo
 	proc_path = os.path.join(proc_dir, procpid)
 	os.makedirs(proc_path, exist_ok=True)
+	os.system(f"chmod -R 744 {proc_path}")
 	
 	# Escreve arquivos
 	with open(os.path.join(proc_path, 'nome.txt'), 'w') as nomeproc:
@@ -196,13 +198,279 @@ def criarproc(script, nome):
 	os.chdir(diratual)
 
 def instalar_hostsys():
-	diroriginal = os.getcwd()
-	os.chdir("./pyOS/system/hostsys")
-	with open("restart.sh", 'w') as restart_sys:
-		restart_sys.write('#!/bin/bash\nclear\nreboot')
-	with open("shutdown.sh", 'w') as quit_sys:
-		quit_sys.write("#!/bin/bash\nclear\npoweroff")
-		os.chdir(diroriginal)
+    diroriginal = os.getcwd()
+    os.chdir("./pyOS/system/hostsys")
+    
+    # Scripts de reinício e desligamento
+    with open("restart.sh", 'w') as restart_sys:
+        restart_sys.write('#!/bin/bash\nclear\nreboot')
+    
+    with open("shutdown.sh", 'w') as quit_sys:
+        quit_sys.write("#!/bin/bash\nclear\npoweroff")
+    
+    # Script de rede corrigido
+    with open("network.sh", "w") as net_sys:
+        net_sys.write(r"""#!/bin/bash
+
+# networking.sh - Script completo para gerenciamento de rede em Linux
+# Autor: Auto-generated
+# Versão: 1.0
+
+# Cores para output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+# Função para mostrar uso
+show_usage() {
+    echo -e "${GREEN}Networking.sh - Script de Gerenciamento de Rede${NC}"
+    echo "Uso: $0 [opção]"
+    echo ""
+    echo "Opções:"
+    echo "  status      - Mostrar status da rede"
+    echo "  interfaces  - Listar interfaces de rede"
+    echo "  ip          - Mostrar endereços IP"
+    echo "  routes      - Mostrar tabela de roteamento"
+    echo "  dns         - Mostrar servidores DNS"
+    echo "  ports       - Mostrar portas abertas"
+    echo "  connections - Mostrar conexões de rede"
+    echo "  restart     - Reiniciar serviço de rede"
+    echo "  test        - Testar conectividade"
+    echo "  all         - Executar todas as verificações"
+    echo "  --help      - Mostrar esta ajuda"
+    echo ""
+}
+
+# Função para verificar se é root
+check_root() {
+    if [[ $EUID -ne 0 ]]; then
+        echo -e "${YELLOW}Aviso: Alguns comandos podem requerer privilégios de root${NC}"
+        return 1
+    fi
+    return 0
+}
+
+# Função para mostrar status da rede
+show_status() {
+    echo -e "${BLUE}=== STATUS DA REDE ===${NC}"
+    ip link show
+    echo ""
+}
+
+# Função para listar interfaces
+show_interfaces() {
+    echo -e "${BLUE}=== INTERFACES DE REDE ===${NC}"
+    echo -e "${GREEN}Interfaces disponíveis:${NC}"
+    ip -o link show | awk -F': ' '{print $2}'
+    echo ""
+    
+    echo -e "${GREEN}Interfaces com detalhes:${NC}"
+    ip addr show
+    echo ""
+}
+
+# Função para mostrar endereços IP
+show_ip() {
+    echo -e "${BLUE}=== ENDEREÇOS IP ===${NC}"
+    
+    # IPv4
+    echo -e "${GREEN}Endereços IPv4:${NC}"
+    ip -4 addr show | grep -E "inet " | awk '{print $2 " on " $NF}'
+    echo ""
+    
+    # IPv6
+    echo -e "${GREEN}Endereços IPv6:${NC}"
+    ip -6 addr show | grep -E "inet6 " | awk '{print $2 " on " $NF}'
+    echo ""
+    
+    # IP público (requer internet)
+    echo -e "${GREEN}IP Público:${NC}"
+    curl -s ifconfig.me 2>/dev/null || echo "Não foi possível obter IP público"
+    echo -e "\n"
+}
+
+# Função para mostrar rotas
+show_routes() {
+    echo -e "${BLUE}=== TABELA DE ROTEAMENTO ===${NC}"
+    
+    echo -e "${GREEN}Tabela de roteamento IPv4:${NC}"
+    ip -4 route show
+    echo ""
+    
+    echo -e "${GREEN}Tabela de roteamento IPv6:${NC}"
+    ip -6 route show
+    echo ""
+}
+
+# Função para mostrar DNS
+show_dns() {
+    echo -e "${BLUE}=== SERVIDORES DNS ===${NC}"
+    
+    # Verificar resolv.conf
+    if [ -f /etc/resolv.conf ]; then
+        echo -e "${GREEN}/etc/resolv.conf:${NC}"
+        grep -E "nameserver|search|domain" /etc/resolv.conf
+    fi
+    echo ""
+    
+    # Verificar systemd-resolve (se disponível)
+    if command -v systemd-resolve &> /dev/null; then
+        echo -e "${GREEN}systemd-resolve --status:${NC}"
+        systemd-resolve --status 2>/dev/null | grep -A5 "DNS Servers" || echo "Não foi possível obter status do systemd-resolve"
+    fi
+    
+    # Testar resolução DNS
+    echo -e "${GREEN}Teste de resolução DNS:${NC}"
+    nslookup google.com 2>/dev/null | grep "Server\|Address" || echo "Falha no teste DNS"
+    echo ""
+}
+
+# Função para mostrar portas abertas
+show_ports() {
+    echo -e "${BLUE}=== PORTAS ABERTAS ===${NC}"
+    
+    if command -v ss &> /dev/null; then
+        echo -e "${GREEN}Portas listening (ss):${NC}"
+        ss -tuln | head -20
+    elif command -v netstat &> /dev/null; then
+        echo -e "${GREEN}Portas listening (netstat):${NC}"
+        netstat -tuln | head -20
+    else
+        echo -e "${RED}Erro: nem ss nem netstat encontrados${NC}"
+    fi
+    echo ""
+}
+
+# Função para mostrar conexões
+show_connections() {
+    echo -e "${BLUE}=== CONEXÕES DE REDE ===${NC}"
+    
+    if command -v ss &> /dev/null; then
+        echo -e "${GREEN}Conexões estabelecidas (ss):${NC}"
+        ss -tun | head -20
+    elif command -v netstat &> /dev/null; then
+        echo -e "${GREEN}Conexões estabelecidas (netstat):${NC}"
+        netstat -tun | head -20
+    fi
+    echo ""
+}
+
+# Função para reiniciar rede
+restart_network() {
+    check_root
+    echo -e "${BLUE}=== REINICIANDO SERVIÇO DE REDE ===${NC}"
+    
+    if systemctl is-active NetworkManager &> /dev/null; then
+        echo -e "${GREEN}Reiniciando NetworkManager...${NC}"
+        systemctl restart NetworkManager
+    elif systemctl is-active network &> /dev/null; then
+        echo -e "${GREEN}Reiniciando network service...${NC}"
+        systemctl restart network
+    elif command -v service &> /dev/null; then
+        echo -e "${GREEN}Reiniciando networking service...${NC}"
+        service networking restart
+    else
+        echo -e "${RED}Erro: Não foi possível identificar o gerenciador de rede${NC}"
+    fi
+    echo ""
+}
+
+# Função para testar conectividade
+test_connectivity() {
+    echo -e "${BLUE}=== TESTES DE CONECTIVIDADE ===${NC}"
+    
+    # Teste de loopback
+    echo -e "${GREEN}Teste de loopback:${NC}"
+    ping -c 2 127.0.0.1 >/dev/null 2>&1 && echo -e "${GREEN}✓ Loopback OK${NC}" || echo -e "${RED}✗ Loopback FALHOU${NC}"
+    echo ""
+    
+    # Teste de gateway
+    gateway=$(ip route show default 2>/dev/null | awk '/default/ {print $3}')
+    if [ -n "$gateway" ]; then
+        echo -e "${GREEN}Teste de gateway ($gateway):${NC}"
+        ping -c 2 $gateway >/dev/null 2>&1 && echo -e "${GREEN}✓ Gateway OK${NC}" || echo -e "${RED}✗ Gateway FALHOU${NC}"
+    else
+        echo -e "${YELLOW}Gateway não encontrado${NC}"
+    fi
+    echo ""
+    
+    # Teste de DNS
+    echo -e "${GREEN}Teste de DNS (google.com):${NC}"
+    ping -c 2 google.com >/dev/null 2>&1 && echo -e "${GREEN}✓ DNS OK${NC}" || echo -e "${RED}✗ DNS FALHOU${NC}"
+    echo ""
+    
+    # Teste de internet
+    echo -e "${GREEN}Teste de internet:${NC}"
+    curl -s --connect-timeout 5 http://www.example.com > /dev/null && \
+        echo -e "${GREEN}✓ Internet OK${NC}" || echo -e "${RED}✗ Internet FALHOU${NC}"
+    echo ""
+}
+
+# Função para mostrar todas as informações
+show_all() {
+    show_status
+    show_interfaces
+    show_ip
+    show_routes
+    show_dns
+    show_ports
+    show_connections
+    test_connectivity
+}
+
+# Tratamento de argumentos
+case "$1" in
+    "status")
+        show_status
+        ;;
+    "interfaces")
+        show_interfaces
+        ;;
+    "ip")
+        show_ip
+        ;;
+    "routes")
+        show_routes
+        ;;
+    "dns")
+        show_dns
+        ;;
+    "ports")
+        show_ports
+        ;;
+    "connections")
+        show_connections
+        ;;
+    "restart")
+        restart_network
+        ;;
+    "test")
+        test_connectivity
+        ;;
+    "all")
+        show_all
+        ;;
+    "--help"|"-h"|"help")
+        show_usage
+        ;;
+    *)
+        echo -e "${RED}Erro: Opção inválida${NC}"
+        echo ""
+        show_usage
+        exit 1
+        ;;
+esac
+
+exit 0
+""")
+    
+    os.chmod("shutdown.sh", 0o755)
+    os.chmod("restart.sh", 0o755)
+    os.chmod("network.sh", 0o755)
+    # Voltar ao diretório original
+    os.chdir(diroriginal)
 	
 def gerar_recursos_sistema():
     import os

@@ -22,7 +22,8 @@ no github:
     5.22
     5.23
     5.24
+    5.25
 
 adições mais recentes:
-5.23: o criador esqueceu de aplicar a 5.23 no github, talvez essa informação não seja útil
 5.24: melhorou o módulo pyOS_proc
+5.25: adicionou o aplicativo "diagnostico de rede"

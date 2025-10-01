@@ -23,8 +23,8 @@ import time
 import threading
 import shutil
 import traceback
-version = "v5.24"
-versionparts = [5, 24]
+version = "v5.25"
+versionparts = [5, 25]
 
 def criar_barra(msg):
 	print(f'{msg}                  {pyOS_system.winbtn}')
@@ -1764,7 +1764,120 @@ def sysmgr():
 			break
 				
 			
-			
+
+
+
+def diagnosticar_rede():
+    """
+    Função para diagnosticar problemas de rede e sugerir soluções
+    """
+    problemas_detectados = []
+    solucoes_sugeridas = []
+    
+    print(Fore.CYAN + "🔍 Iniciando diagnóstico de rede..." + Style.RESET_ALL)
+    time.sleep(1)
+    
+    # 1. Verificar conectividade com a internet
+    print(Fore.YELLOW + "📡 Testando conectividade com a internet..." + Style.RESET_ALL)
+    try:
+        resposta = requests.get("https://www.google.com", timeout=10)
+        if resposta.status_code == 200:
+            print(Fore.GREEN + "✅ Conectividade com a internet: OK" + Style.RESET_ALL)
+        else:
+            problemas_detectados.append("Problema de conectividade com sites externos")
+            solucoes_sugeridas.append("Verifique se o firewall não está bloqueando a conexão")
+    except requests.exceptions.RequestException as e:
+        problemas_detectados.append(f"Sem conexão com a internet: {str(e)}")
+        solucoes_sugeridas.append("Verifique seu modem/roteador e cabos de rede")
+    
+    # 2. Verificar DNS
+    print(Fore.YELLOW + "🌐 Testando resolução DNS..." + Style.RESET_ALL)
+    try:
+        socket.gethostbyname("www.google.com")
+        print(Fore.GREEN + "✅ DNS: OK" + Style.RESET_ALL)
+    except socket.gaierror:
+        problemas_detectados.append("Problema com servidores DNS")
+        solucoes_sugeridas.append("Tente usar DNS público (8.8.8.8 ou 1.1.1.1)")
+    
+    # 3. Verificar gateway padrão
+    print(Fore.YELLOW + "🔄 Testando gateway de rede..." + Style.RESET_ALL)
+    try:
+        if os.name == 'nt':  # Windows
+            resultado = subprocess.run(["ipconfig"], capture_output=True, text=True, timeout=10)
+            if "Gateway Padrão" in resultado.stdout and "." in resultado.stdout:
+                print(Fore.GREEN + "✅ Gateway de rede: OK" + Style.RESET_ALL)
+            else:
+                problemas_detectados.append("Gateway padrão não configurado")
+                solucoes_sugeridas.append("Verifique as configurações de IP do adaptador de rede")
+        else:  # Linux/Mac
+            resultado = subprocess.run(["route", "-n"], capture_output=True, text=True, timeout=10)
+            if "0.0.0.0" in resultado.stdout:
+                print(Fore.GREEN + "✅ Gateway de rede: OK" + Style.RESET_ALL)
+            else:
+                problemas_detectados.append("Gateway padrão não configurado")
+                solucoes_sugeridas.append("Verifique as configurações de IP do adaptador de rede")
+    except Exception as e:
+        problemas_detectados.append(f"Erro ao verificar gateway: {str(e)}")
+    
+    # 4. Verificar latência
+    print(Fore.YELLOW + "⏱️ Testando latência..." + Style.RESET_ALL)
+    try:
+        inicio = time.time()
+        requests.get("https://www.google.com", timeout=5)
+        latencia = (time.time() - inicio) * 1000
+        if latencia < 100:
+            print(Fore.GREEN + f"✅ Latência: {latencia:.2f}ms (Boa)" + Style.RESET_ALL)
+        elif latencia < 300:
+            print(Fore.YELLOW + f"⚠️ Latência: {latencia:.2f}ms (Moderada)" + Style.RESET_ALL)
+        else:
+            print(Fore.RED + f"🔴 Latência: {latencia:.2f}ms (Alta)" + Style.RESET_ALL)
+            problemas_detectados.append("Latência de rede alta")
+            solucoes_sugeridas.append("Feche aplicações que usam muita banda ou reinicie o roteador")
+    except:
+        pass
+    
+    # 5. Verificar portas locais
+    print(Fore.YELLOW + "🔌 Testando portas de rede..." + Style.RESET_ALL)
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.settimeout(2)
+            resultado = s.connect_ex(('127.0.0.1', 80))
+            if resultado == 0:
+                print(Fore.GREEN + "✅ Porta local 80: OK" + Style.RESET_ALL)
+            else:
+                print(Fore.YELLOW + "⚠️ Porta 80 local não disponível" + Style.RESET_ALL)
+    except:
+        print(Fore.YELLOW + "⚠️ Erro ao testar porta 80" + Style.RESET_ALL)
+    
+    # Exibir relatório final
+    print("\n" + "="*50)
+    print(Fore.CYAN + "📊 RELATÓRIO DE DIAGNÓSTICO DE REDE" + Style.RESET_ALL)
+    print("="*50)
+    
+    if not problemas_detectados:
+        print(Fore.GREEN + "🎉 Nenhum problema grave detectado! Sua rede parece estar funcionando bem." + Style.RESET_ALL)
+    else:
+        print(Fore.RED + f"🔴 Problemas detectados: {len(problemas_detectados)}" + Style.RESET_ALL)
+        for i, problema in enumerate(problemas_detectados, 1):
+            print(Fore.RED + f"{i}. {problema}" + Style.RESET_ALL)
+        
+        print("\n" + Fore.GREEN + "💡 Soluções sugeridas:" + Style.RESET_ALL)
+        for i, solucao in enumerate(solucoes_sugeridas, 1):
+            print(Fore.GREEN + f"{i}. {solucao}" + Style.RESET_ALL)
+        
+        # Soluções gerais
+        print("\n" + Fore.YELLOW + "🛠️ Ações gerais para tentar:" + Style.RESET_ALL)
+        print("1. Reinicie o modem/roteador")
+        print("2. Reinicie o computador")
+        print("3. Verifique os cabos de rede")
+        print("4. Desative e reative o adaptador de rede")
+        print("5. Entre em contato com seu provedor de internet")
+
+    print(f"\n{Fore.CYAN}Diagnóstico concluído em: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}{Style.RESET_ALL}")
+    input("pressione enter para sair")
+
+# Exemplo de uso:
+# diagnosticar_rede()
 			
 			
 def abrirapp(app):
@@ -1814,7 +1927,8 @@ apps = {
 	"navegador": navegador_tui,
 	"gerenciador de tarefas": taskmgr,
 	"mensagens": messages,
-	"fotos": images
+	"fotos": images,
+	"diagnostico de rede": diagnosticar_rede
 }
 # Inicie a thread de verificação de processos
 thread_processos = threading.Thread(target=verificar_processos_background, daemon=True)

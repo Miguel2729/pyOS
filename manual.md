@@ -1,4 +1,4 @@
-# 🛠 Manual de Instalação e Uso — pyOS v5.24
+# 🛠 Manual de Instalação e Uso — pyOS v5.25
 
 ## 📥 Instalação
 
@@ -121,6 +121,10 @@
   - 1 ve as fotos,
   - 2 visualiza foto,
   - 0 sai
+#### 11. 🛜 diagnóstico de rede
+- Digite `diagnostico de rede` para abrir
+- apenas abra e você verá um diagnóstico da sua rede
+- para sair espere o diagnóstico terminar e para sair pressione enter
 
 
 ---

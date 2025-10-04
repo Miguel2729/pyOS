@@ -23,8 +23,8 @@ import time
 import threading
 import shutil
 import traceback
-version = "v5.25"
-versionparts = [5, 25]
+version = "v5.26"
+versionparts = [5, 26]
 
 def criar_barra(msg):
 	print(f'{msg}                  {pyOS_system.winbtn}')
@@ -84,38 +84,7 @@ if not shutil.which("git"):
 else:
 	pass
 	
-if not os.path.exists("passwordexist.txt"):
-	senhaconfig01 = input("definir senha?(s/n)")
-	if senhaconfig01 == "s":
-		with open("passwordexist.txt", 'w') as cfg01:
-			cfg01.write("True")
-		senha = input("sua senha:")
-		with open("senha.txt", 'w') as cfg02:
-			cfg02.write(senha)
-			
-			# Aplicar permissoes de segurança
-		os.system("chmod 600 passwordexist.txt")
-	if os.path.exists("senha.txt"):
-		os.system("chmod 600 senha.txt")
-	elif senhaconfig01 == "n":
-		with open("passwordexist.txt", 'w') as cfg01:
-			cfg01.write("False")
-	else:
-		print("opcao não reconhecida")
-else:
-	with open("passwordexist.txt", 'r') as existe:
-		sim = existe.read()
-		if sim == "True":
-			with open("senha.txt", 'r') as senha:
-				senhacorreta = senha.read()
-				senhauser = input("senha: ")
-				if senhauser == senhacorreta:
-					pass
-				else:
-					print("senha incorreta")
-					quit()
-		else:
-			pass
+
 		
 try:
 	import requests
@@ -139,63 +108,216 @@ print(Fore.YELLOW + "trabalhando em atualizaçoes...")
 os.system("pip install --upgrade pip")
 time.sleep(8)
 os.system("clear")
+if not os.path.exists("./pyOS"):
+	print("⛔️ a pasta ./pyOS esta ausente, o pyOS não funcionara corretamente")
+	quit()
+
 def instalar_modulos():
-	diratual = os.getcwd()
-	os.chdir("./pyOS/system/modules")
-	with open("pyOS_hora.py", 'w') as mod1:
-		mod1.write("import time\n\ndef hora():\n	forhor = time.strftime('%H:%M')\n	return forhor")
-	with open("pyOS_system.py", 'w') as mod2:
-		mod2.write("import os\n\nwinbtn = '_ ⛶ X'\ndef upgpip():\n	os.system('pip install --upgrade pip')")
-	os.chdir(diratual)
-	os.makedirs("apps/libs", exist_ok=True)
-	os.chdir("./apps/libs")
-	with open('pyOS_app.py', 'w') as mod1app:
-		mod1app.write("import pyfiglet\nfrom colorama import Fore\ndef fonts(fonte, texto):\n	text = pyfiglet.figlet.format(texto, font=fonte)\n\ndef colors(cor):\n	if cor == 'azul'\n		return Fore.BLUE\n	if cor == 'ciano':\n		return Fore.CYAN\n	if cor == 'roxo':\n		return Fore.MAGENTA\n	if cor == 'amarelo':\n		return Fore.YELLOW\n	if cor == 'vermelho':\n		return Fore.RED\n	if cor == 'normal':\n		return Fore.WHITE")
-	with open("pyOS_proc.py", 'w') as mod2app:
-		mod2app.write("""import os
+    diratual = os.getcwd()
+    os.chdir("./pyOS/system/modules")
+    
+    with open("pyOS_hora.py", 'w') as mod1:
+        mod1.write("import time\n\ndef hora():\n    forhor = time.strftime('%H:%M')\n    return forhor")
+    
+    with open("pyOS_system.py", 'w') as mod2:
+        mod2.write("import os\n\nwinbtn = '_ ⛶ X'\ndef upgpip():\n    os.system('pip install --upgrade pip')")
+    
+    os.chdir(diratual)
+    os.makedirs("apps/libs", exist_ok=True)
+    os.chdir("./apps/libs")
+    
+    with open('pyOS_app.py', 'w') as mod1app:
+        mod1app.write(f"""import pyfiglet
+from colorama import Fore
+ver = {versionparts}
+def fonts(fonte, texto):
+    text = pyfiglet.figlet.format(texto, font=fonte)
+
+def colors(cor):
+    if cor == 'azul':
+        return Fore.BLUE
+    if cor == 'ciano':
+        return Fore.CYAN
+    if cor == 'roxo':
+        return Fore.MAGENTA
+    if cor == 'amarelo':
+        return Fore.YELLOW
+    if cor == 'vermelho':
+        return Fore.RED
+    if cor == 'normal':
+        return Fore.WHITE""")
+    
+    with open("pyOS_proc.py", 'w') as mod2app:
+        mod2app.write("""import os
 import random
 import subprocess
 import sys
 
 def criarproc(script, nome):
-	# Encontra o diretório base automaticamente
-	current_file = os.path.abspath(__file__)
-	base_dir = os.path.dirname(os.path.dirname(os.path.dirname(current_file)))
-	proc_dir = os.path.join(base_dir, "pyOS", "proc")
-	
-	# Garante que o diretório existe
-	os.makedirs(proc_dir, exist_ok=True)
-	
-	n1 = str(random.randint(0, 9))
-	n2 = str(random.randint(0, 9))
-	n3 = str(random.randint(0, 9))
-	n4 = str(random.randint(0, 9))
-	procpid = n1 + n2 + n3 + n4
-	
-	# Cria diretório do processo
-	proc_path = os.path.join(proc_dir, procpid)
-	os.makedirs(proc_path, exist_ok=True)
-	os.system(f"chmod -R 744 {proc_path}")
-	
-	# Escreve arquivos
-	with open(os.path.join(proc_path, 'nome.txt'), 'w') as nomeproc:
-		nomeproc.write(nome)
-	with open(os.path.join(proc_path, 'script.py'), 'w') as scriptpy:
-		scriptpy.write(script)
-	
-	# Inicia o processo em background
-	try:
-		processo = subprocess.Popen(
-			[sys.executable, os.path.join(proc_path, 'script.py')],
-			stdout=subprocess.PIPE,
-			stderr=subprocess.PIPE,
-			text=True
-		)
-		return procpid, processo
-	except Exception as e:
-		print(f"Erro ao iniciar processo: {e}")
-		return procpid, None""")
-	os.chdir(diratual)
+    # Encontra o diretório base automaticamente
+    current_file = os.path.abspath(__file__)
+    base_dir = os.path.dirname(os.path.dirname(os.path.dirname(current_file)))
+    proc_dir = os.path.join(base_dir, "pyOS", "proc")
+    
+    # Garante que o diretório existe
+    os.makedirs(proc_dir, exist_ok=True)
+    
+    n1 = str(random.randint(0, 9))
+    n2 = str(random.randint(0, 9))
+    n3 = str(random.randint(0, 9))
+    n4 = str(random.randint(0, 9))
+    procpid = n1 + n2 + n3 + n4
+    
+    # Cria diretório do processo
+    proc_path = os.path.join(proc_dir, procpid)
+    os.makedirs(proc_path, exist_ok=True)
+    os.system(f"chmod -R 744 {proc_path}")
+    
+    # Escreve arquivos
+    with open(os.path.join(proc_path, 'nome.txt'), 'w') as nomeproc:
+        nomeproc.write(nome)
+    with open(os.path.join(proc_path, 'script.py'), 'w') as scriptpy:
+        scriptpy.write(script)
+    
+    # Inicia o processo em background
+    try:
+        processo = subprocess.Popen(
+            [sys.executable, os.path.join(proc_path, 'script.py')],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True
+        )
+        return procpid, processo
+    except Exception as e:
+        print(f"Erro ao iniciar processo: {e}")
+        return procpid, None""")
+    
+    # 🔥 AQUI ESTÁ A CORREÇÃO - pyOS_vm.py formatado corretamente
+    with open("pyOS_vm.py", "w") as mod3app:
+        mod3app.write("""# pyOS_vm.py - EMULADOR REAL
+import threading
+import struct
+
+class VMEmulator:
+    def __init__(self, ram_size=1024):  # 1MB RAM
+        # MEMÓRIA FÍSICA (emulação real)
+        self.ram = bytearray(ram_size * 1024)  # 1MB em bytes
+        
+        # REGISTRADORES REAIS (x86-like)
+        self.registers = {
+            'EAX': 0, 'EBX': 0, 'ECX': 0, 'EDX': 0,
+            'ESI': 0, 'EDI': 0, 'EBP': 0, 'ESP': 0x1000,  # Stack pointer
+            'EIP': 0x100,  # Instruction pointer
+            'EFLAGS': 0
+        }
+        
+        # INSTRUÇÕES SUPORTADAS (opcodes reais)
+        self.instructions = {
+            0x88: self.mov_rm8_r8,    # MOV [mem], reg
+            0x89: self.mov_rm32_r32,  # MOV [mem], reg32
+            0xB8: self.mov_eax_imm32, # MOV EAX, immediate
+            0x01: self.add_rm32_r32,  # ADD [mem], reg
+            0x83: self.add_rm32_imm8, # ADD [mem], immediate8
+            0xEB: self.jmp_rel8,      # JMP short
+        }
+        
+        self.running = False
+        self.cpu_thread = threading.Thread(target=self.cpu_cycle)
+    
+    def start(self):
+        \"\"\"Inicia a emulação REAL\"\"\"
+        self.running = True
+        self.cpu_thread.start()
+        print(\"CPU Emulator iniciado!\")
+    
+    def stop(self):
+        self.running = False
+    
+    def cpu_cycle(self):
+        \"\"\"Ciclo de fetch-decode-execute REAL\"\"\"
+        while self.running:
+            # FETCH: Busca opcode da memória no EIP
+            eip = self.registers['EIP']
+            if eip >= len(self.ram):
+                break
+                
+            opcode = self.ram[eip]
+            
+            # DECODE: Identifica instrução
+            if opcode in self.instructions:
+                # EXECUTE: Executa instrução
+                self.instructions[opcode]()
+            else:
+                print(f\"Instrução não implementada: 0x{opcode:02X}\")
+                self.registers['EIP'] += 1
+    
+    # --- INSTRUÇÕES IMPLEMENTADAS ---
+    
+    def mov_rm8_r8(self):
+        \"\"\"MOV byte [mem], reg8 - Opcode 0x88\"\"\"
+        eip = self.registers['EIP']
+        modrm = self.ram[eip + 1]  # ModR/M byte
+        
+        # Decodifica endereço e registrador
+        reg = (modrm >> 3) & 0x07
+        rm = modrm & 0x07
+        
+        # Simples: MOV [EDI], AL
+        if rm == 7:  # EDI
+            address = self.registers['EDI']
+            if reg == 0:  # AL
+                self.ram[address] = self.registers['EAX'] & 0xFF
+        
+        self.registers['EIP'] += 2
+    
+    def mov_eax_imm32(self):
+        \"\"\"MOV EAX, immediate32 - Opcode 0xB8\"\"\"
+        eip = self.registers['EIP']
+        
+        # Lê 4 bytes do immediate
+        immediate = struct.unpack('<I', bytes(self.ram[eip+1:eip+5]))[0]
+        self.registers['EAX'] = immediate
+        
+        self.registers['EIP'] += 5
+    
+    def add_rm32_imm8(self):
+        \"\"\"ADD [mem], immediate8 - Opcode 0x83\"\"\"
+        eip = self.registers['EIP']
+        modrm = self.ram[eip + 1]
+        immediate = self.ram[eip + 2]
+        
+        # ADD [EAX], imm8
+        if (modrm & 0xC7) == 0x00:
+            address = self.registers['EAX']
+            current = struct.unpack('<I', bytes(self.ram[address:address+4]))[0]
+            result = (current + immediate) & 0xFFFFFFFF
+            self.ram[address:address+4] = struct.pack('<I', result)
+        
+        self.registers['EIP'] += 3
+    
+    def jmp_rel8(self):
+        \"\"\"JMP short - Opcode 0xEB\"\"\"
+        eip = self.registers['EIP']
+        offset = self.ram[eip + 1]
+        
+        # Calcula salto relativo
+        if offset > 127:
+            offset -= 256  # Complemento de 2
+        
+        self.registers['EIP'] += 2 + offset
+    
+    def load_binary(self, data, address=0x100):
+        \"\"\"Carrega código binário REAL na memória\"\"\"
+        for i, byte in enumerate(data):
+            if address + i < len(self.ram):
+                self.ram[address + i] = byte
+        
+        self.registers['EIP'] = address
+        print(f\"Programa carregado em 0x{address:04X}\")
+""")
+    
+    os.chdir(diratual)
+    print("Módulos instalados com sucesso!")
 
 def instalar_hostsys():
     diroriginal = os.getcwd()
@@ -554,6 +676,8 @@ def list_devices():
 
 
 def pyOS():
+    if os.path.exists("./syscreated.txt"):
+    	return
     from pathlib import Path
     os.makedirs("./pyOS/system/modules", exist_ok=True)
     os.makedirs("./pyOS/system/tmp", exist_ok=True)
@@ -569,10 +693,14 @@ def pyOS():
     instalar_modulos()
     instalar_hostsys()
     gerar_recursos_sistema()
+    with open("syscreated.txt", "w") as conclu:
+    	conclu.write("True")
 def verificar_processos_background():
     """Verifica e mantém processos rodando em background sem mensagens"""
     processos_com_erro = set()  # Conjunto para armazenar processos com erro
     
+
+
     while True:
         try:
             # Verificar se diretório de processos existe
@@ -654,6 +782,41 @@ def verificar_processos_background():
 
 
 pyOS()
+
+if not os.path.exists("passwordexist.txt"):
+	senhaconfig01 = input("definir senha?(s/n)")
+	if senhaconfig01 == "s":
+		with open("passwordexist.txt", 'w') as cfg01:
+			cfg01.write("True")
+		senha = input("sua senha:")
+		with open("senha.txt", 'w') as cfg02:
+			cfg02.write(senha)
+			
+			# Aplicar permissoes de segurança
+		os.system("chmod 600 passwordexist.txt")
+	if os.path.exists("senha.txt"):
+		os.system("chmod 600 senha.txt")
+	elif senhaconfig01 == "n":
+		with open("passwordexist.txt", 'w') as cfg01:
+			cfg01.write("False")
+	else:
+		print("opcao não reconhecida")
+else:
+	with open("passwordexist.txt", 'r') as existe:
+		sim = existe.read()
+		if sim == "True":
+			with open("senha.txt", 'r') as senha:
+				senhacorreta = senha.read()
+				senhauser = input("senha: ")
+				if senhauser == senhacorreta:
+					pass
+				else:
+					print("senha incorreta")
+					quit()
+		else:
+			pass
+
+
 sys.path.insert(0, "pyOS/system/modules")
 import pyOS_hora
 import pyOS_system

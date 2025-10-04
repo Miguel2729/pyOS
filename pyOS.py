@@ -23,8 +23,8 @@ import time
 import threading
 import shutil
 import traceback
-version = "v5.26"
-versionparts = [5, 26]
+version = "v5.27"
+versionparts = [5, 27]
 
 def criar_barra(msg):
 	print(f'{msg}                  {pyOS_system.winbtn}')
@@ -110,214 +110,289 @@ time.sleep(8)
 os.system("clear")
 if not os.path.exists("./pyOS"):
 	print("⛔️ a pasta ./pyOS esta ausente, o pyOS não funcionara corretamente")
-	quit()
+	opcao = input("[1] entra mesmo assim [2] desligar: ")
+	if opcao == "1":
+		pass
+	elif opcao == "2":
+		quit()
+	else:
+		quit()
 
 def instalar_modulos():
-    diratual = os.getcwd()
-    os.chdir("./pyOS/system/modules")
-    
-    with open("pyOS_hora.py", 'w') as mod1:
-        mod1.write("import time\n\ndef hora():\n    forhor = time.strftime('%H:%M')\n    return forhor")
-    
-    with open("pyOS_system.py", 'w') as mod2:
-        mod2.write("import os\n\nwinbtn = '_ ⛶ X'\ndef upgpip():\n    os.system('pip install --upgrade pip')")
-    
-    os.chdir(diratual)
-    os.makedirs("apps/libs", exist_ok=True)
-    os.chdir("./apps/libs")
-    
-    with open('pyOS_app.py', 'w') as mod1app:
-        mod1app.write(f"""import pyfiglet
+	diratual = os.getcwd()
+	os.chdir("./pyOS/system/modules")
+	
+	with open("pyOS_hora.py", 'w') as mod1:
+		mod1.write("import time\n\ndef hora():\n\tforhor = time.strftime('%H:%M')\n\treturn forhor")
+	
+	with open("pyOS_system.py", 'w') as mod2:
+		mod2.write("import os\n\nwinbtn = '_ ⛶ X'\ndef upgpip():\n\tos.system('pip install --upgrade pip')")
+	
+	with open("pyOS_calc.py", 'w') as mod3:
+		mod3.write("def calc(n1, op, n2):\n\tres = eval(f\"{n1} {op} {n2}\")\n\treturn res")
+	
+	# Novo módulo pyOS_proc apenas com sistema de processos em background
+	with open("pyOS_proc.py", 'w') as mod4:
+		mod4.write("""import os
+import subprocess
+import sys
+import threading
+import time
+
+processos_ativos = {}
+
+def verprocbac():
+	\"\"\"Verifica e mantém processos rodando em background sem mensagens\"\"\"
+	processos_com_erro = set()
+
+	while True:
+		try:
+			# Verificar se diretório de processos existe
+			proc_dir = "./pyOS/proc"
+			if not os.path.exists(proc_dir):
+				time.sleep(5)
+				continue
+				
+			# Listar todos os processos no diretório
+			processos_no_diretorio = [d for d in os.listdir(proc_dir) 
+									if os.path.isdir(os.path.join(proc_dir, d))]
+			
+			# Remover processos que não estão mais no diretório
+			for pid in list(processos_ativos.keys()):
+				if pid not in processos_no_diretorio:
+					try:
+						processos_ativos[pid].terminate()
+					except:
+						pass
+					del processos_ativos[pid]
+					if pid in processos_com_erro:
+						processos_com_erro.remove(pid)
+			
+			# Verificar e iniciar processos
+			for pid in processos_no_diretorio:
+				if pid in processos_com_erro:
+					continue
+					
+				pid_path = os.path.join(proc_dir, pid)
+				script_path = os.path.join(pid_path, 'script.py')
+				
+				# Verificar se o processo já está ativo
+				if pid in processos_ativos:
+					if processos_ativos[pid].poll() is not None:
+						returncode = processos_ativos[pid].returncode
+						if returncode != 0:
+							processos_com_erro.add(pid)
+							error_file = os.path.join(pid_path, 'error.log')
+							with open(error_file, 'w') as f:
+								f.write(f"Processo terminou com código de erro: {returncode}\\n")
+						del processos_ativos[pid]
+					continue
+				
+				# Iniciar novo processo
+				if os.path.exists(script_path):
+					try:
+						processo = subprocess.Popen(
+							[sys.executable, script_path],
+							stdout=subprocess.PIPE,
+							stderr=subprocess.PIPE,
+							text=True,
+							cwd=pid_path
+						)
+						processos_ativos[pid] = processo
+					except Exception as e:
+						processos_com_erro.add(pid)
+						error_file = os.path.join(pid_path, 'error.log')
+						with open(error_file, 'w') as f:
+							f.write(f"Erro ao iniciar processo: {e}\\n")
+			
+			# Limpar processos finalizados
+			for pid in list(processos_ativos.keys()):
+				if processos_ativos[pid].poll() is not None:
+					returncode = processos_ativos[pid].returncode
+					if returncode != 0:
+						processos_com_erro.add(pid)
+						pid_path = os.path.join(proc_dir, pid)
+						error_file = os.path.join(pid_path, 'error.log')
+						with open(error_file, 'w') as f:
+							f.write(f"Processo terminou com código de erro: {returncode}\\n")
+					del processos_ativos[pid]
+					
+		except Exception:
+			# Ignorar todos os erros silenciosamente
+			pass
+		
+		time.sleep(3)
+
+def init():
+	\"\"\"Inicia o sistema de processos em background\"\"\"
+	thread_processos = threading.Thread(target=verprocback, daemon=True)
+	thread_processos.start()
+	return thread_processos
+
+def stopall():
+	\"\"\"Encerra todos os processos ativos\"\"\"
+	for pid, processo in processos_ativos.items():
+		try:
+			processo.terminate()
+		except:
+			pass
+	processos_ativos.clear()
+""")
+	
+	os.chdir(diratual)
+	os.makedirs("apps/libs", exist_ok=True)
+	os.chdir("./apps/libs")
+	
+	with open('pyOS_app.py', 'w') as mod1app:
+		mod1app.write(f"""import pyfiglet
 from colorama import Fore
 ver = {versionparts}
 def fonts(fonte, texto):
-    text = pyfiglet.figlet.format(texto, font=fonte)
+	text = pyfiglet.figlet.format(texto, font=fonte)
 
 def colors(cor):
-    if cor == 'azul':
-        return Fore.BLUE
-    if cor == 'ciano':
-        return Fore.CYAN
-    if cor == 'roxo':
-        return Fore.MAGENTA
-    if cor == 'amarelo':
-        return Fore.YELLOW
-    if cor == 'vermelho':
-        return Fore.RED
-    if cor == 'normal':
-        return Fore.WHITE""")
-    
-    with open("pyOS_proc.py", 'w') as mod2app:
-        mod2app.write("""import os
-import random
-import subprocess
-import sys
-
-def criarproc(script, nome):
-    # Encontra o diretório base automaticamente
-    current_file = os.path.abspath(__file__)
-    base_dir = os.path.dirname(os.path.dirname(os.path.dirname(current_file)))
-    proc_dir = os.path.join(base_dir, "pyOS", "proc")
-    
-    # Garante que o diretório existe
-    os.makedirs(proc_dir, exist_ok=True)
-    
-    n1 = str(random.randint(0, 9))
-    n2 = str(random.randint(0, 9))
-    n3 = str(random.randint(0, 9))
-    n4 = str(random.randint(0, 9))
-    procpid = n1 + n2 + n3 + n4
-    
-    # Cria diretório do processo
-    proc_path = os.path.join(proc_dir, procpid)
-    os.makedirs(proc_path, exist_ok=True)
-    os.system(f"chmod -R 744 {proc_path}")
-    
-    # Escreve arquivos
-    with open(os.path.join(proc_path, 'nome.txt'), 'w') as nomeproc:
-        nomeproc.write(nome)
-    with open(os.path.join(proc_path, 'script.py'), 'w') as scriptpy:
-        scriptpy.write(script)
-    
-    # Inicia o processo em background
-    try:
-        processo = subprocess.Popen(
-            [sys.executable, os.path.join(proc_path, 'script.py')],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True
-        )
-        return procpid, processo
-    except Exception as e:
-        print(f"Erro ao iniciar processo: {e}")
-        return procpid, None""")
-    
-    # 🔥 AQUI ESTÁ A CORREÇÃO - pyOS_vm.py formatado corretamente
-    with open("pyOS_vm.py", "w") as mod3app:
-        mod3app.write("""# pyOS_vm.py - EMULADOR REAL
+	if cor == 'azul':
+		return Fore.BLUE
+	if cor == 'ciano':
+		return Fore.CYAN
+	if cor == 'roxo':
+		return Fore.MAGENTA
+	if cor == 'amarelo':
+		return Fore.YELLOW
+	if cor == 'vermelho':
+		return Fore.RED
+	if cor == 'normal':
+		return Fore.WHITE""")
+	
+	# Remove o pyOS_proc.py antigo da pasta apps/libs
+	if os.path.exists("pyOS_proc.py"):
+		os.remove("pyOS_proc.py")
+	
+	with open("pyOS_vm.py", "w") as mod3app:
+		mod3app.write("""# pyOS_vm.py - EMULADOR REAL
 import threading
 import struct
 
 class VMEmulator:
-    def __init__(self, ram_size=1024):  # 1MB RAM
-        # MEMÓRIA FÍSICA (emulação real)
-        self.ram = bytearray(ram_size * 1024)  # 1MB em bytes
-        
-        # REGISTRADORES REAIS (x86-like)
-        self.registers = {
-            'EAX': 0, 'EBX': 0, 'ECX': 0, 'EDX': 0,
-            'ESI': 0, 'EDI': 0, 'EBP': 0, 'ESP': 0x1000,  # Stack pointer
-            'EIP': 0x100,  # Instruction pointer
-            'EFLAGS': 0
-        }
-        
-        # INSTRUÇÕES SUPORTADAS (opcodes reais)
-        self.instructions = {
-            0x88: self.mov_rm8_r8,    # MOV [mem], reg
-            0x89: self.mov_rm32_r32,  # MOV [mem], reg32
-            0xB8: self.mov_eax_imm32, # MOV EAX, immediate
-            0x01: self.add_rm32_r32,  # ADD [mem], reg
-            0x83: self.add_rm32_imm8, # ADD [mem], immediate8
-            0xEB: self.jmp_rel8,      # JMP short
-        }
-        
-        self.running = False
-        self.cpu_thread = threading.Thread(target=self.cpu_cycle)
-    
-    def start(self):
-        \"\"\"Inicia a emulação REAL\"\"\"
-        self.running = True
-        self.cpu_thread.start()
-        print(\"CPU Emulator iniciado!\")
-    
-    def stop(self):
-        self.running = False
-    
-    def cpu_cycle(self):
-        \"\"\"Ciclo de fetch-decode-execute REAL\"\"\"
-        while self.running:
-            # FETCH: Busca opcode da memória no EIP
-            eip = self.registers['EIP']
-            if eip >= len(self.ram):
-                break
-                
-            opcode = self.ram[eip]
-            
-            # DECODE: Identifica instrução
-            if opcode in self.instructions:
-                # EXECUTE: Executa instrução
-                self.instructions[opcode]()
-            else:
-                print(f\"Instrução não implementada: 0x{opcode:02X}\")
-                self.registers['EIP'] += 1
-    
-    # --- INSTRUÇÕES IMPLEMENTADAS ---
-    
-    def mov_rm8_r8(self):
-        \"\"\"MOV byte [mem], reg8 - Opcode 0x88\"\"\"
-        eip = self.registers['EIP']
-        modrm = self.ram[eip + 1]  # ModR/M byte
-        
-        # Decodifica endereço e registrador
-        reg = (modrm >> 3) & 0x07
-        rm = modrm & 0x07
-        
-        # Simples: MOV [EDI], AL
-        if rm == 7:  # EDI
-            address = self.registers['EDI']
-            if reg == 0:  # AL
-                self.ram[address] = self.registers['EAX'] & 0xFF
-        
-        self.registers['EIP'] += 2
-    
-    def mov_eax_imm32(self):
-        \"\"\"MOV EAX, immediate32 - Opcode 0xB8\"\"\"
-        eip = self.registers['EIP']
-        
-        # Lê 4 bytes do immediate
-        immediate = struct.unpack('<I', bytes(self.ram[eip+1:eip+5]))[0]
-        self.registers['EAX'] = immediate
-        
-        self.registers['EIP'] += 5
-    
-    def add_rm32_imm8(self):
-        \"\"\"ADD [mem], immediate8 - Opcode 0x83\"\"\"
-        eip = self.registers['EIP']
-        modrm = self.ram[eip + 1]
-        immediate = self.ram[eip + 2]
-        
-        # ADD [EAX], imm8
-        if (modrm & 0xC7) == 0x00:
-            address = self.registers['EAX']
-            current = struct.unpack('<I', bytes(self.ram[address:address+4]))[0]
-            result = (current + immediate) & 0xFFFFFFFF
-            self.ram[address:address+4] = struct.pack('<I', result)
-        
-        self.registers['EIP'] += 3
-    
-    def jmp_rel8(self):
-        \"\"\"JMP short - Opcode 0xEB\"\"\"
-        eip = self.registers['EIP']
-        offset = self.ram[eip + 1]
-        
-        # Calcula salto relativo
-        if offset > 127:
-            offset -= 256  # Complemento de 2
-        
-        self.registers['EIP'] += 2 + offset
-    
-    def load_binary(self, data, address=0x100):
-        \"\"\"Carrega código binário REAL na memória\"\"\"
-        for i, byte in enumerate(data):
-            if address + i < len(self.ram):
-                self.ram[address + i] = byte
-        
-        self.registers['EIP'] = address
-        print(f\"Programa carregado em 0x{address:04X}\")
+	def __init__(self, ram_size=1024):  # 1MB RAM
+		# MEMÓRIA FÍSICA (emulação real)
+		self.ram = bytearray(ram_size * 1024)  # 1MB em bytes
+		
+		# REGISTRADORES REAIS (x86-like)
+		self.registers = {
+			'EAX': 0, 'EBX': 0, 'ECX': 0, 'EDX': 0,
+			'ESI': 0, 'EDI': 0, 'EBP': 0, 'ESP': 0x1000,  # Stack pointer
+			'EIP': 0x100,  # Instruction pointer
+			'EFLAGS': 0
+		}
+		
+		# INSTRUÇÕES SUPORTADAS (opcodes reais)
+		self.instructions = {
+			0x88: self.mov_rm8_r8,    # MOV [mem], reg
+			0x89: self.mov_rm32_r32,  # MOV [mem], reg32
+			0xB8: self.mov_eax_imm32, # MOV EAX, immediate
+			0x01: self.add_rm32_r32,  # ADD [mem], reg
+			0x83: self.add_rm32_imm8, # ADD [mem], immediate8
+			0xEB: self.jmp_rel8,      # JMP short
+		}
+		
+		self.running = False
+		self.cpu_thread = threading.Thread(target=self.cpu_cycle)
+	
+	def start(self):
+		\"\"\"Inicia a emulação REAL\"\"\"
+		self.running = True
+		self.cpu_thread.start()
+		print(\"CPU Emulator iniciado!\")
+	
+	def stop(self):
+		self.running = False
+	
+	def cpu_cycle(self):
+		\"\"\"Ciclo de fetch-decode-execute REAL\"\"\"
+		while self.running:
+			# FETCH: Busca opcode da memória no EIP
+			eip = self.registers['EIP']
+			if eip >= len(self.ram):
+				break
+				
+			opcode = self.ram[eip]
+			
+			# DECODE: Identifica instrução
+			if opcode in self.instructions:
+				# EXECUTE: Executa instrução
+				self.instructions[opcode]()
+			else:
+				print(f\"Instrução não implementada: 0x{opcode:02X}\")
+				self.registers['EIP'] += 1
+	
+	# --- INSTRUÇÕES IMPLEMENTADAS ---
+	
+	def mov_rm8_r8(self):
+		\"\"\"MOV byte [mem], reg8 - Opcode 0x88\"\"\"
+		eip = self.registers['EIP']
+		modrm = self.ram[eip + 1]  # ModR/M byte
+		
+		# Decodifica endereço e registrador
+		reg = (modrm >> 3) & 0x07
+		rm = modrm & 0x07
+		
+		# Simples: MOV [EDI], AL
+		if rm == 7:  # EDI
+			address = self.registers['EDI']
+			if reg == 0:  # AL
+				self.ram[address] = self.registers['EAX'] & 0xFF
+		
+		self.registers['EIP'] += 2
+	
+	def mov_eax_imm32(self):
+		\"\"\"MOV EAX, immediate32 - Opcode 0xB8\"\"\"
+		eip = self.registers['EIP']
+		
+		# Lê 4 bytes do immediate
+		immediate = struct.unpack('<I', bytes(self.ram[eip+1:eip+5]))[0]
+		self.registers['EAX'] = immediate
+		
+		self.registers['EIP'] += 5
+	
+	def add_rm32_imm8(self):
+		\"\"\"ADD [mem], immediate8 - Opcode 0x83\"\"\"
+		eip = self.registers['EIP']
+		modrm = self.ram[eip + 1]
+		immediate = self.ram[eip + 2]
+		
+		# ADD [EAX], imm8
+		if (modrm & 0xC7) == 0x00:
+			address = self.registers['EAX']
+			current = struct.unpack('<I', bytes(self.ram[address:address+4]))[0]
+			result = (current + immediate) & 0xFFFFFFFF
+			self.ram[address:address+4] = struct.pack('<I', result)
+		
+		self.registers['EIP'] += 3
+	
+	def jmp_rel8(self):
+		\"\"\"JMP short - Opcode 0xEB\"\"\"
+		eip = self.registers['EIP']
+		offset = self.ram[eip + 1]
+		
+		# Calcula salto relativo
+		if offset > 127:
+			offset -= 256  # Complemento de 2
+		
+		self.registers['EIP'] += 2 + offset
+	
+	def load_binary(self, data, address=0x100):
+		\"\"\"Carrega código binário REAL na memória\"\"\"
+		for i, byte in enumerate(data):
+			if address + i < len(self.ram):
+				self.ram[address + i] = byte
+		
+		self.registers['EIP'] = address
+		print(f\"Programa carregado em 0x{address:04X}\")
 """)
-    
-    os.chdir(diratual)
-    print("Módulos instalados com sucesso!")
+	
+	os.chdir(diratual)
+	print("Módulos instalados com sucesso!")
 
 def instalar_hostsys():
     diroriginal = os.getcwd()
@@ -695,89 +770,7 @@ def pyOS():
     gerar_recursos_sistema()
     with open("syscreated.txt", "w") as conclu:
     	conclu.write("True")
-def verificar_processos_background():
-    """Verifica e mantém processos rodando em background sem mensagens"""
-    processos_com_erro = set()  # Conjunto para armazenar processos com erro
-    
 
-
-    while True:
-        try:
-            # Verificar se diretório de processos existe
-            proc_dir = "./pyOS/proc"
-            if not os.path.exists(proc_dir):
-                time.sleep(5)
-                continue
-                
-            # Listar todos os processos no diretório
-            processos_no_diretorio = [d for d in os.listdir(proc_dir) 
-                                    if os.path.isdir(os.path.join(proc_dir, d))]
-            
-            # Remover processos que não estão mais no diretório
-            for pid in list(processos_ativos.keys()):
-                if pid not in processos_no_diretorio:
-                    try:
-                        processos_ativos[pid].terminate()
-                    except:
-                        pass
-                    del processos_ativos[pid]
-                    if pid in processos_com_erro:
-                        processos_com_erro.remove(pid)
-            
-            # Verificar e iniciar processos
-            for pid in processos_no_diretorio:
-                if pid in processos_com_erro:
-                    continue
-                    
-                pid_path = os.path.join(proc_dir, pid)
-                script_path = os.path.join(pid_path, 'script.py')
-                
-                # Verificar se o processo já está ativo
-                if pid in processos_ativos:
-                    if processos_ativos[pid].poll() is not None:
-                        returncode = processos_ativos[pid].returncode
-                        if returncode != 0:
-                            processos_com_erro.add(pid)
-                            error_file = os.path.join(pid_path, 'error.log')
-                            with open(error_file, 'w') as f:
-                                f.write(f"Processo terminou com código de erro: {returncode}\n")
-                        del processos_ativos[pid]
-                    continue
-                
-                # Iniciar novo processo
-                if os.path.exists(script_path):
-                    try:
-                        processo = subprocess.Popen(
-                            [sys.executable, script_path],
-                            stdout=subprocess.PIPE,
-                            stderr=subprocess.PIPE,
-                            text=True,
-                            cwd=pid_path
-                        )
-                        processos_ativos[pid] = processo
-                    except Exception as e:
-                        processos_com_erro.add(pid)
-                        error_file = os.path.join(pid_path, 'error.log')
-                        with open(error_file, 'w') as f:
-                            f.write(f"Erro ao iniciar processo: {e}\n")
-            
-            # Limpar processos finalizados
-            for pid in list(processos_ativos.keys()):
-                if processos_ativos[pid].poll() is not None:
-                    returncode = processos_ativos[pid].returncode
-                    if returncode != 0:
-                        processos_com_erro.add(pid)
-                        pid_path = os.path.join(proc_dir, pid)
-                        error_file = os.path.join(pid_path, 'error.log')
-                        with open(error_file, 'w') as f:
-                            f.write(f"Processo terminou com código de erro: {returncode}\n")
-                    del processos_ativos[pid]
-                    
-        except Exception:
-            # Ignorar todos os erros silenciosamente
-            pass
-        
-        time.sleep(3)
         
 
 
@@ -818,9 +811,14 @@ else:
 
 
 sys.path.insert(0, "pyOS/system/modules")
-import pyOS_hora
-import pyOS_system
-        
+try:
+	import pyOS_hora
+	import pyOS_system
+	import pyOS_calc
+	import pyOS_proc
+except Exception as e:
+	print(f"erro ao importar modulos: {e}")
+	
 # aplicativos
 def calculadora():
 	print("operadores:")
@@ -842,7 +840,7 @@ def calculadora():
 		quit()
 	# apenas operadores validos
 	elif op == "/" or op == "*" or op == "+" or op == "-":
-		res = eval(f"{n1} {op} {n2}")
+		res = pyOS_calc.calc(n1, op, n2)
 		print(res)
 	else:
 		print("operador invalído!")
@@ -2070,15 +2068,7 @@ def abrirapp(app):
 		print(Fore.RED + "app não encontrado")
 		time.sleep(3)
 
-def encerrar_processos_ao_sair():
-    """Encerra todos os processos ativos ao sair do sistema"""
-    for pid, processo in processos_ativos.items():
-        try:
-            processo.terminate()
-            print(f"Processo {pid} encerrado")
-        except:
-            pass
-    processos_ativos.clear()
+
 
 apps = {
 	"calculadora": calculadora,
@@ -2093,9 +2083,8 @@ apps = {
 	"fotos": images,
 	"diagnostico de rede": diagnosticar_rede
 }
-# Inicie a thread de verificação de processos
-thread_processos = threading.Thread(target=verificar_processos_background, daemon=True)
-thread_processos.start()
+
+pyOS_proc.init
 executando = True
 def parar():
 	global executando
@@ -2166,7 +2155,7 @@ while executando:
 			del hora
 			time.sleep(3)
 		elif funcesc == "fechar":
-			encerrar_processos_ao_sair()
+			pyOS_proc.stopall()
 			quit()
 		elif funcesc == "hostsys":
 			os.system("clear")
@@ -2181,15 +2170,15 @@ while executando:
 			if subfuncesc == "desligar":
 				confirmar = input("desligar?(s/n):")
 				if confirmar == "s":
-					encerrar_processos_ao_sair()
+					pyOS_proc.stopall()
 					os.system("sh ./pyOS/system/hostsys/shutdown.sh")
 			elif subfuncesc == "reiniciar":
 				confirmar = input("reiniciar?(s/n): ")
 				if confirmar == "s":
-					encerrar_processos_ao_sair()
+					pyOS_proc.stopall()
 					os.system("sh ./pyOS/system/hostsys/restart.sh")
 	elif app == "quit":
-		encerrar_processos_ao_sair()
+		pyOS_proc.stopall()
 		quit()
 	elif app in apps:
 		abrirapp(app)

@@ -1,4 +1,4 @@
-# 🛠 Manual de Instalação e Uso — pyOS v5.27
+# 🛠 Manual de Instalação e Uso — pyOS v5.28
 
 ## 📥 Instalação
 
@@ -49,7 +49,7 @@
   2. Adicionar nova nota
   3. Remover nota existente
   4. Sair
-  5. ver conteudo de nota
+  5. Ver conteúdo de nota
 
 #### 3. ⚙️ Configurações
 - Digite `config` para abrir
@@ -105,27 +105,48 @@
 - Digite `gerenciador de tarefas` para abrir
 - Visualize e encerre processos
 - Monitoramento automático
-#### 9. 💬 mensagens
-- Digite `mensagens` para abrir
-- sistema de mensagens
--Opções:
- 1. hospeda uma conversa
- 2. entra numa conversa
- 3. cria um usuário
- 4. sai
-#### 10. 🖼 fotos
-- Digite `fotos` para abrir
-- para ver suas fotos
-- Armazene as fotos em imgs/
-- Opções:
-  - 1 ve as fotos,
-  - 2 visualiza foto,
-  - 0 sai
-#### 11. 🛜 diagnóstico de rede
-- Digite `diagnostico de rede` para abrir
-- apenas abra e você verá um diagnóstico da sua rede
-- para sair espere o diagnóstico terminar e para sair pressione enter
 
+#### 9. 💬 Mensagens
+- Digite `mensagens` para abrir
+- Sistema de mensagens em rede
+- Opções:
+  1. Hospedar uma conversa (servidor)
+  2. Entrar numa conversa (cliente)
+  3. Criar um usuário
+  4. Sair
+
+#### 10. 🖼 Fotos
+- Digite `fotos` para abrir
+- Visualize suas fotos como arte ASCII
+- Armazene as fotos em `imgs/`
+- Opções:
+  - 1: Ver lista de fotos
+  - 2: Visualizar foto específica
+  - 0: Sair
+
+#### 11. 🔧 Diagnóstico de Rede
+- Digite `diagnostico de rede` para abrir
+- Verifica automaticamente:
+  - Conectividade com internet
+  - Servidores DNS
+  - Gateway de rede
+  - Latência
+  - Portas abertas
+- Sugere soluções para problemas detectados
+
+#### 12. 📅 Agenda
+- Digite `agenda` para abrir
+- **NOVO NA v5.28**
+- Gerencia eventos e compromissos
+- Mostra automaticamente:
+  - Data atual formatada
+  - Eventos de hoje
+  - Eventos próximos (próximos 3 dias)
+- Opções:
+  - Adicionar evento
+  - Ver todos os eventos
+  - Remover evento
+- Armazena eventos em `./events/eventos.json`
 
 ---
 
@@ -151,6 +172,27 @@
 - Senha opcional no início
 - Bloqueio de comandos perigosos
 - Execução segura em sandbox
+- Processos em background isolados
+
+---
+
+## 🆕 Novidades da v5.28
+
+### ✨ Agenda Integrada
+- **Sistema completo de gerenciamento de eventos**
+- Visualização automática de compromissos
+- Alertas para eventos próximos
+- Armazenamento persistente em JSON
+
+### 🔧 Melhorias no Sistema
+- Diagnóstico de rede aprimorado
+- Processos em background mais estáveis
+- Interface mais consistente
+
+### 📊 Monitoramento
+- Verificação automática de eventos do dia
+- Alertas para eventos futuros
+- Sistema de datas intuitivo
 
 ---
 
@@ -160,14 +202,9 @@
 3. Processos rodam em background
 4. Use o gerenciador de tarefas para monitorar
 5. Personalize cores no menu de configurações
+6. **Agenda**: Adicione eventos com data no formato `YYYY-MM-DD`
+7. **Diagnóstico de rede**: Use para solucionar problemas de conexão
 
 ---
 
-## 🆘 Solução de Problemas
-- App não encontrado: verifique o nome
-- Erro de permissão: execute com privilégios
-- Dependência faltando: use `appsInstalados` → opção 1 ou 5
-
----
-
-**FIM DO MANUAL DE USO**
+## 🗂 Estrutura de Arquivos

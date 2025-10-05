@@ -27,7 +27,10 @@ version = "v5.27"
 versionparts = [5, 27]
 
 def criar_barra(msg):
-	print(f'{msg}                  {pyOS_system.winbtn}')
+	try:
+		print(f'{msg}                  {pyOS_system.winbtn}')
+	except Exception:
+		print(f'{msg}                  ? ? ?')
 
 def exception_handler(exc_type, exc_value, exc_traceback):
     if issubclass(exc_type, KeyboardInterrupt):
@@ -2083,8 +2086,10 @@ apps = {
 	"fotos": images,
 	"diagnostico de rede": diagnosticar_rede
 }
-
-pyOS_proc.init
+try:
+	pyOS_proc.init
+except Exception:
+	pass
 executando = True
 def parar():
 	global executando

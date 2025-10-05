@@ -112,7 +112,7 @@ os.system("pip install --upgrade pip")
 time.sleep(8)
 os.system("clear")
 if not os.path.exists("./pyOS"):
-	print("⛔️ a pasta ./pyOS esta ausente, o pyOS não funcionara corretamente")
+	print("⛔️ a pasta ./pyOS esta ausente, o pyOS não funcionara corretamente, se for a primeira vez rodando o pyOS, a pasta será criada automaticamente")
 	opcao = input("[1] entra mesmo assim [2] desligar: ")
 	if opcao == "1":
 		pass

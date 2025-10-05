@@ -23,8 +23,8 @@ import time
 import threading
 import shutil
 import traceback
-version = "v5.27"
-versionparts = [5, 27]
+version = "v5.28"
+versionparts = [5, 28]
 
 def criar_barra(msg):
 	try:
@@ -2073,6 +2073,205 @@ def abrirapp(app):
 
 
 
+def agenda():
+    """
+    App de agenda com eventos, lembretes e datas
+    """
+    import os
+    import json
+    from datetime import datetime, timedelta
+    
+    # Diretório de eventos (mesmo padrão do notes/)
+    events_dir = "./events"
+    os.makedirs(events_dir, exist_ok=True)
+    
+    def data_atual():
+        """Retorna a data atual formatada"""
+        return datetime.now().strftime("%Y-%m-%d")
+    
+    def mostrar_data_atual():
+        """Mostra a data atual de forma bonita"""
+        hoje = datetime.now()
+        dias_semana = ["Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado", "Domingo"]
+        meses = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
+        
+        print(f"\n📅 {dias_semana[hoje.weekday()]}, {hoje.day} de {meses[hoje.month-1]} de {hoje.year}")
+        print("=" * 40)
+    
+    def carregar_eventos():
+        """Carrega todos os eventos do arquivo"""
+        eventos_file = os.path.join(events_dir, "eventos.json")
+        if os.path.exists(eventos_file):
+            with open(eventos_file, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        return {}
+    
+    def salvar_eventos(eventos):
+        """Salva eventos no arquivo"""
+        eventos_file = os.path.join(events_dir, "eventos.json")
+        with open(eventos_file, 'w', encoding='utf-8') as f:
+            json.dump(eventos, f, indent=2, ensure_ascii=False)
+    
+    def verificar_eventos_hoje():
+        """Verifica e mostra eventos do dia atual"""
+        eventos = carregar_eventos()
+        hoje = data_atual()
+        
+        eventos_hoje = []
+        for evento_id, evento in eventos.items():
+            if evento['data'] == hoje:
+                eventos_hoje.append(evento)
+        
+        if eventos_hoje:
+            print(f"\n🎯 EVENTOS PARA HOJE ({len(eventos_hoje)}):")
+            for evento in eventos_hoje:
+                print(f"   ⏰ {evento['hora']} - {evento['titulo']}")
+                if evento['descricao']:
+                    print(f"     📝 {evento['descricao']}")
+        else:
+            print("\n✅ Nenhum evento para hoje")
+    
+    def verificar_eventos_proximos():
+        """Verifica eventos próximos (próximos 3 dias)"""
+        eventos = carregar_eventos()
+        hoje = datetime.now()
+        
+        eventos_proximos = []
+        for evento_id, evento in eventos.items():
+            data_evento = datetime.strptime(evento['data'], "%Y-%m-%d")
+            dias_restantes = (data_evento - hoje).days
+            
+            if 0 < dias_restantes <= 3:  # Próximos 3 dias (exclui hoje)
+                eventos_proximos.append((dias_restantes, evento))
+        
+        if eventos_proximos:
+            print(f"\n🔔 EVENTOS PRÓXIMOS:")
+            for dias, evento in sorted(eventos_proximos):
+                print(f"   📌 Em {dias} dia(s) - {evento['data']}")
+                print(f"      ⏰ {evento['hora']} - {evento['titulo']}")
+    
+    def adicionar_evento():
+        """Adiciona um novo evento"""
+        print("\n➕ ADICIONAR EVENTO")
+        
+        titulo = input("Título do evento: ").strip()
+        if not titulo:
+            print("❌ Título é obrigatório!")
+            return
+        
+        # Data
+        while True:
+            data = input("Data (YYYY-MM-DD ou Enter para hoje): ").strip()
+            if not data:
+                data = data_atual()
+                break
+            try:
+                datetime.strptime(data, "%Y-%m-%d")
+                break
+            except ValueError:
+                print("❌ Formato inválido! Use YYYY-MM-DD")
+        
+        # Hora
+        while True:
+            hora = input("Hora (HH:MM ou Enter para 00:00): ").strip()
+            if not hora:
+                hora = "00:00"
+                break
+            try:
+                datetime.strptime(hora, "%H:%M")
+                break
+            except ValueError:
+                print("❌ Formato inválido! Use HH:MM")
+        
+        descricao = input("Descrição (opcional): ").strip()
+        
+        # Salvar evento
+        eventos = carregar_eventos()
+        evento_id = str(len(eventos) + 1)
+        
+        eventos[evento_id] = {
+            'titulo': titulo,
+            'data': data,
+            'hora': hora,
+            'descricao': descricao,
+            'criado_em': data_atual()
+        }
+        
+        salvar_eventos(eventos)
+        print("✅ Evento adicionado com sucesso!")
+    
+    def listar_eventos():
+        """Lista todos os eventos"""
+        eventos = carregar_eventos()
+        
+        if not eventos:
+            print("\n📭 Nenhum evento cadastrado")
+            return
+        
+        # Ordenar por data
+        eventos_ordenados = sorted(
+            eventos.items(), 
+            key=lambda x: (x[1]['data'], x[1]['hora'])
+        )
+        
+        print(f"\n📋 TODOS OS EVENTOS ({len(eventos)}):")
+        for evento_id, evento in eventos_ordenados:
+            data_formatada = datetime.strptime(evento['data'], "%Y-%m-%d").strftime("%d/%m/%Y")
+            print(f"\n🎯 {evento['titulo']}")
+            print(f"   📅 {data_formatada} | ⏰ {evento['hora']}")
+            if evento['descricao']:
+                print(f"   📝 {evento['descricao']}")
+            print(f"   🔑 ID: {evento_id}")
+    
+    def remover_evento():
+        """Remove um evento pelo ID"""
+        eventos = carregar_eventos()
+        
+        if not eventos:
+            print("❌ Nenhum evento para remover")
+            return
+        
+        listar_eventos()
+        evento_id = input("\nDigite o ID do evento a remover: ").strip()
+        
+        if evento_id in eventos:
+            confirmar = input(f"Remover '{eventos[evento_id]['titulo']}'? (s/n): ")
+            if confirmar.lower() == 's':
+                del eventos[evento_id]
+                salvar_eventos(eventos)
+                print("✅ Evento removido!")
+        else:
+            print("❌ ID não encontrado!")
+    
+    # MAIN LOOP
+    while True:
+        mostrar_data_atual()
+        verificar_eventos_hoje()
+        verificar_eventos_proximos()
+        
+        print("\n" + "=" * 40)
+        print("1. Adicionar evento")
+        print("2. Ver todos os eventos") 
+        print("3. Remover evento")
+        print("0. Voltar ao menu principal")
+        
+        opcao = input("\nEscolha uma opção: ").strip()
+        
+        if opcao == "1":
+            adicionar_evento()
+        elif opcao == "2":
+            listar_eventos()
+            input("\nPressione Enter para continuar...")
+        elif opcao == "3":
+            remover_evento()
+        elif opcao == "0":
+            print("👋 Voltando ao menu principal...")
+            break
+        else:
+            print("❌ Opção inválida!")
+        
+        input("\nPressione Enter para continuar...")
+
 apps = {
 	"calculadora": calculadora,
 	"notepad": notepad,
@@ -2084,7 +2283,8 @@ apps = {
 	"gerenciador de tarefas": taskmgr,
 	"mensagens": messages,
 	"fotos": images,
-	"diagnostico de rede": diagnosticar_rede
+	"diagnostico de rede": diagnosticar_rede,
+	"agenda": agenda
 }
 try:
 	pyOS_proc.init

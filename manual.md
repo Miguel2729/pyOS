@@ -1,4 +1,4 @@
-# 🛠 Manual de Instalação e Uso — pyOS v5.28
+# 🛠 Manual de Instalação e Uso — pyOS v5.29
 
 ## 📥 Instalação
 

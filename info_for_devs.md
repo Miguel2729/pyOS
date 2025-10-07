@@ -80,7 +80,7 @@ crie um repositório github com os arquivos do app
  exemplo:
  ```python 
 sys.path.insert(0, "./libs")
-from pyOS_app import version
+from pyOS_app import ver
 if ver[0] >= 5 and ver[1] >= 25:
     print("compatível")
 else:

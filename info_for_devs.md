@@ -76,12 +76,12 @@ crie um repositório github com os arquivos do app
  - substituindo script pelo script do processo(string) e nome pelo nome do processo(também string)
 
 ## como app pode verificar a versão do pyOS no pyOS?:
- usando a variável version do pyOS_app
+ usando a variável ver do pyOS_app
  exemplo:
  ```python 
 sys.path.insert(0, "./libs")
 from pyOS_app import version
-if version[0] >= 5 and version[1] >= 25:
+if ver[0] >= 5 and ver[1] >= 25:
     print("compatível")
 else:
     print("use pyOS v5.25 ou superior para usar o app")

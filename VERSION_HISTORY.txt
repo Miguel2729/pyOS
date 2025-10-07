@@ -26,7 +26,8 @@ no github:
     5.26
     5.27
     5.28
+    5.29
 
 adições mais recentes:
-5.27: adicionou mais dependência ao pyOS/ Para ser mais útil 
 5.28: adicionou o app agenda
+5.29: adicionou o app controle de rede e melhorou a calculadora

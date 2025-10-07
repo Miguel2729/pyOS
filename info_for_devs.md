@@ -22,13 +22,16 @@ Armazena os aplicativos instalados
 ## notes/(v5.15+)
 - notas do bloco de notas
 
+## events/(5.28+)
+- Armazena eventos da agenda
+
 ## system/
 
 | subpasta | função
 | -------- | ------ |
 | hostsys | Armazenar arquivos sh para interagir com o sistema host |
-| modules | Armazena módulos do pyOS(exemplos: pyOS_hora.py, pyOS_system.py) |
-| tmp | arquivos temporários do pyOS |
+| modules | Armazena módulos do pyOS(exemplos: pyOS_hora.py, pyOS_system.py, pyOS_proc.py, pyOS_calc.py) |
+| tmp | arquivos temporários do pyOS(tmp, tmpdir, temp) |
 
 ## arquivos do pyOS
 - passwordexist.txt(permissão 600): configuração que a senha foi configurada como sim ou não
@@ -47,7 +50,7 @@ print(fala)
 #### como usar ascii_image_display.py:
 ```python
 import ascii_image_display as aid
-aid.display_ascii_image(fotos/foto1.png)
+aid.display_ascii_image("fotos/foto1.png")
 ```
 
 # como criar apps pro pyOS
@@ -71,3 +74,18 @@ crie um repositório github com os arquivos do app
  pyOS_proc.criarproc(script, nome)
 
  - substituindo script pelo script do processo(string) e nome pelo nome do processo(também string)
+
+## como app pode verificar a versão do pyOS no pyOS?:
+ usando a variável version do pyOS_app
+ exemplo:
+ ```python 
+sys.path.insert(0, "./libs")
+from pyOS_app import version
+if version[0] >= 5 and version[1] >= 25:
+    print("compatível")
+else:
+    print("use pyOS v5.25 ou superior para usar o app")
+    quit()
+# código se não cair no else...
+```
+ o índice 0 da lista version é o major e o índice 1 é o minor

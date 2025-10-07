@@ -23,8 +23,8 @@ import time
 import threading
 import shutil
 import traceback
-version = "v5.28"
-versionparts = [5, 28]
+version = "v5.29"
+versionparts = [5, 29]
 
 def criar_barra(msg):
 	try:
@@ -112,7 +112,7 @@ os.system("pip install --upgrade pip")
 time.sleep(8)
 os.system("clear")
 if not os.path.exists("./pyOS"):
-	print("⛔️ a pasta ./pyOS esta ausente, o pyOS não funcionara corretamente, se for a primeira vez rodando o pyOS, a pasta será criada automaticamente")
+	print("⛔️ a pasta ./pyOS esta ausente, o pyOS não funcionara corretamente")
 	opcao = input("[1] entra mesmo assim [2] desligar: ")
 	if opcao == "1":
 		pass
@@ -831,16 +831,18 @@ def calculadora():
 	print("subtrair: -")
 	try:
 		# apenas numeros
-		n1 = int(input("numero 1: "))
-		n2 = int(input("numero 2: "))
+		n1 = float(input("numero 1: "))
+		n2 = float(input("numero 2: "))
 	except ValueError:
 		print("não é número")
-		quit()
+		time.sleep(5)
+		return
 	op = input("operador matematico: ")
 	# sem divisão por zero
 	if  n2 == 0 and op == "/":
 		print("erro de divisão por zero")
-		quit()
+		time.sleep(5)
+		return
 	# apenas operadores validos
 	elif op == "/" or op == "*" or op == "+" or op == "-":
 		res = pyOS_calc.calc(n1, op, n2)
@@ -2042,6 +2044,139 @@ def diagnosticar_rede():
 
 # Exemplo de uso:
 # diagnosticar_rede()
+
+def internet_control():
+    """
+    Função amigável para conectar e desconectar da internet
+    Interface simples com menu para o usuário
+    """
+    
+    def mostrar_menu():
+        print(f"\n{Fore.CYAN}=== CONTROLE DE INTERNET ==={Style.RESET_ALL}")
+        print(f"{Fore.GREEN}1.{Style.RESET_ALL} Conectar à Internet")
+        print(f"{Fore.RED}2.{Style.RESET_ALL} Desconectar da Internet")
+        print(f"{Fore.YELLOW}3.{Style.RESET_ALL} Verificar Status da Conexão")
+        print(f"{Fore.BLUE}0.{Style.RESET_ALL} Sair")
+        print(f"{Fore.CYAN}{'='*28}{Style.RESET_ALL}")
+    
+    def conectar_internet():
+        print(f"\n{Fore.GREEN}Conectando à Internet...{Style.RESET_ALL}")
+        
+        # Comandos para diferentes sistemas operacionais
+        if os.name == 'nt':  # Windows
+            commands = [
+                'netsh interface set interface "Wi-Fi" enabled',
+                'netsh interface set interface "Ethernet" enabled',
+                'ipconfig /renew'
+            ]
+        else:  # Linux/Mac
+            commands = [
+                'sudo systemctl start NetworkManager',
+                'sudo service networking start',
+                'sudo ifconfig eth0 up',
+                'sudo ifconfig wlan0 up'
+            ]
+        
+        for cmd in commands:
+            try:
+                result = os.system(cmd)
+                if result == 0:
+                    print(f"{Fore.GREEN}✓ Comando executado com sucesso{Style.RESET_ALL}")
+                time.sleep(1)
+            except Exception as e:
+                print(f"{Fore.YELLOW}⚠ Aviso: {e}{Style.RESET_ALL}")
+        
+        print(f"{Fore.GREEN}✅ Tentativa de conexão concluída!{Style.RESET_ALL}")
+        verificar_status()
+    
+    def desconectar_internet():
+        print(f"\n{Fore.RED}Desconectando da Internet...{Style.RESET_ALL}")
+        
+        # Comandos para diferentes sistemas operacionais
+        if os.name == 'nt':  # Windows
+            commands = [
+                'netsh interface set interface "Wi-Fi" disabled',
+                'netsh interface set interface "Ethernet" disabled'
+            ]
+        else:  # Linux/Mac
+            commands = [
+                'sudo systemctl stop NetworkManager',
+                'sudo service networking stop',
+                'sudo ifconfig eth0 down',
+                'sudo ifconfig wlan0 down'
+            ]
+        
+        for cmd in commands:
+            try:
+                result = os.system(cmd)
+                if result == 0:
+                    print(f"{Fore.GREEN}✓ Comando executado com sucesso{Style.RESET_ALL}")
+                time.sleep(1)
+            except Exception as e:
+                print(f"{Fore.YELLOW}⚠ Aviso: {e}{Style.RESET_ALL}")
+        
+        print(f"{Fore.RED}🔌 Tentativa de desconexão concluída!{Style.RESET_ALL}")
+        verificar_status()
+    
+    def verificar_status():
+        print(f"\n{Fore.BLUE}Verificando status da conexão...{Style.RESET_ALL}")
+        
+        def testar_conexao(host="8.8.8.8", port=53, timeout=3):
+            """
+            Testa a conectividade com a internet
+            """
+            try:
+                socket.setdefaulttimeout(timeout)
+                socket.socket(socket.AF_INET, socket.SOCK_STREAM).connect((host, port))
+                return True
+            except socket.error:
+                return False
+        
+        # Teste de conexão
+        if testar_conexao():
+            print(f"{Fore.GREEN}✅ Internet: CONECTADA{Style.RESET_ALL}")
+        else:
+            print(f"{Fore.RED}❌ Internet: DESCONECTADA{Style.RESET_ALL}")
+        
+        # Informações adicionais
+        try:
+            hostname = socket.gethostname()
+            print(f"{Fore.CYAN}📡 Hostname: {hostname}{Style.RESET_ALL}")
+        except:
+            pass
+        
+        hora_atual = pyOS_hora.hora() if 'pyOS_hora' in globals() else "N/A"
+        print(f"{Fore.CYAN}🕐 Hora: {hora_atual}{Style.RESET_ALL}")
+    
+    # Loop principal do menu
+    while True:
+        mostrar_menu()
+        
+        try:
+            opcao = input(f"\n{Fore.YELLOW}Escolha uma opção (0-3): {Style.RESET_ALL}").strip()
+            
+            if opcao == '1':
+                conectar_internet()
+            elif opcao == '2':
+                # Confirmação para desconectar
+                confirmar = input(f"{Fore.YELLOW}Tem certeza que deseja desconectar? (s/N): {Style.RESET_ALL}").strip().lower()
+                if confirmar in ['s', 'sim', 'y', 'yes']:
+                    desconectar_internet()
+                else:
+                    print(f"{Fore.BLUE}Operação cancelada.{Style.RESET_ALL}")
+            elif opcao == '3':
+                verificar_status()
+            elif opcao == '0':
+                print(f"{Fore.CYAN}Saindo do controle de internet...{Style.RESET_ALL}")
+                break
+            else:
+                print(f"{Fore.RED}❌ Opção inválida! Escolha entre 0 e 3.{Style.RESET_ALL}")
+        
+        except KeyboardInterrupt:
+            print(f"\n{Fore.YELLOW}Operação interrompida pelo usuário.{Style.RESET_ALL}")
+            break
+        except Exception as e:
+            print(f"{Fore.RED}❌ Erro: {e}{Style.RESET_ALL}")
 			
 			
 def abrirapp(app):
@@ -2284,7 +2419,8 @@ apps = {
 	"mensagens": messages,
 	"fotos": images,
 	"diagnostico de rede": diagnosticar_rede,
-	"agenda": agenda
+	"agenda": agenda,
+	"controle de internet": internet_control
 }
 try:
 	pyOS_proc.init

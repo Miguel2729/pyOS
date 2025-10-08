@@ -70,8 +70,8 @@ crie um repositório github com os arquivos do app
  se der erro de arquivo não encontrado digite 8 e defina o arquivo main do app, desde que seja .py
 
 ## como fazer processo em Segundo Plano no seu app
- importe o módulo na pasta libs/(dentro de apps/ onde os apps são instalados) pyOS_proc.py. para criar o processo no código:
- pyOS_proc.criarproc(script, nome)
+ importe o módulo na pasta libs/(dentro de apps/ onde os apps são instalados) pyOS_appproc.py. para criar o processo no código:
+ pyOS_appproc.criarproc(script, nome)
 
  - substituindo script pelo script do processo(string) e nome pelo nome do processo(também string)
 

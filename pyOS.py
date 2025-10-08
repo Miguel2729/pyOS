@@ -23,8 +23,8 @@ import time
 import threading
 import shutil
 import traceback
-version = "v5.29"
-versionparts = [5, 29]
+version = "v5.30"
+versionparts = [5, 30]
 
 def criar_barra(msg):
 	try:
@@ -134,7 +134,7 @@ def instalar_modulos():
 	with open("pyOS_calc.py", 'w') as mod3:
 		mod3.write("def calc(n1, op, n2):\n\tres = eval(f\"{n1} {op} {n2}\")\n\treturn res")
 	
-	# Novo módulo pyOS_proc apenas com sistema de processos em background
+	# Módulo pyOS_proc para o sistema (processos em background)
 	with open("pyOS_proc.py", 'w') as mod4:
 		mod4.write("""import os
 import subprocess
@@ -228,7 +228,7 @@ def verprocbac():
 
 def init():
 	\"\"\"Inicia o sistema de processos em background\"\"\"
-	thread_processos = threading.Thread(target=verprocback, daemon=True)
+	thread_processos = threading.Thread(target=verprocbac, daemon=True)
 	thread_processos.start()
 	return thread_processos
 
@@ -267,9 +267,52 @@ def colors(cor):
 	if cor == 'normal':
 		return Fore.WHITE""")
 	
-	# Remove o pyOS_proc.py antigo da pasta apps/libs
-	if os.path.exists("pyOS_proc.py"):
-		os.remove("pyOS_proc.py")
+	# pyOS_proc para apps (criação de processos)
+	with open("pyOS_appproc.py", 'w') as mod2app:
+		mod2app.write("""import os
+import random
+import subprocess
+import sys
+
+def criarproc(script, nome):
+	# Encontra o diretório base automaticamente
+	current_file = os.path.abspath(__file__)
+	base_dir = os.path.dirname(os.path.dirname(os.path.dirname(current_file)))
+	proc_dir = os.path.join(base_dir, "pyOS", "proc")
+	
+	# Garante que o diretório existe
+	os.makedirs(proc_dir, exist_ok=True)
+	
+	n1 = str(random.randint(0, 9))
+	n2 = str(random.randint(0, 9))
+	n3 = str(random.randint(0, 9))
+	n4 = str(random.randint(0, 9))
+	procpid = n1 + n2 + n3 + n4
+	
+	# Cria diretório do processo
+	proc_path = os.path.join(proc_dir, procpid)
+	os.makedirs(proc_path, exist_ok=True)
+	os.system(f"chmod -R 744 {proc_path}")
+	
+	# Escreve arquivos
+	with open(os.path.join(proc_path, 'nome.txt'), 'w') as nomeproc:
+		nomeproc.write(nome)
+	with open(os.path.join(proc_path, 'script.py'), 'w') as scriptpy:
+		scriptpy.write(script)
+	
+	# Inicia o processo em background
+	try:
+		processo = subprocess.Popen(
+			[sys.executable, os.path.join(proc_path, 'script.py')],
+			stdout=subprocess.PIPE,
+			stderr=subprocess.PIPE,
+			text=True
+		)
+		return procpid, processo
+	except Exception as e:
+		print(f"Erro ao iniciar processo: {e}")
+		return procpid, None
+""")
 	
 	with open("pyOS_vm.py", "w") as mod3app:
 		mod3app.write("""# pyOS_vm.py - EMULADOR REAL
@@ -829,6 +872,8 @@ def calculadora():
 	print("multiplicação: *")
 	print("somar: +")
 	print("subtrair: -")
+	print("divisão inteira: //")
+	print("potencia: **")
 	try:
 		# apenas numeros
 		n1 = float(input("numero 1: "))
@@ -844,7 +889,7 @@ def calculadora():
 		time.sleep(5)
 		return
 	# apenas operadores validos
-	elif op == "/" or op == "*" or op == "+" or op == "-":
+	elif op == "/" or op == "*" or op == "+" or op == "-" or op == "//" or op == "**":
 		res = pyOS_calc.calc(n1, op, n2)
 		print(res)
 	else:
@@ -1261,12 +1306,13 @@ def appsInstalados():
 			except Exception:
 				print(f'{app}                 ? ? ?')
 
-			# SOLUÇÃO COM TABS - MÉTODO SIMPLES
 			app_path = os.path.join("apps", f"{app}.py")
 			if os.path.exists(app_path):
 				try:
-					# Adicionar diretório de libs ao path
-					sys.path.insert(0, os.path.abspath("./apps/libs"))
+					# CORREÇÃO: Adicionar o path correto para apps/libs
+					libs_path = os.path.abspath("./apps/libs")
+					if libs_path not in sys.path:
+						sys.path.insert(0, libs_path)
 					
 					with open(app_path, 'r', encoding='utf-8') as f:
 						codigo_app = f.read()
@@ -1318,7 +1364,9 @@ def appsInstalados():
 				caminho = f"./apps/{app}/{arquivo}"
 				if os.path.exists(caminho):
 					# Adicionar diretório de libs ao path
-					sys.path.insert(0, os.path.abspath("./apps/libs"))
+					libs_path = os.path.abspath("./apps/libs")
+					if libs_path not in sys.path:
+						sys.path.insert(0, libs_path)
 					
 					with open(caminho, 'r', encoding='utf-8') as appcom:
 						exec(appcom.read(), globals())

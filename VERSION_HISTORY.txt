@@ -27,7 +27,8 @@ no github:
     5.27
     5.28
     5.29
+    5.30
 
 adições mais recentes:
-5.28: adicionou o app agenda
 5.29: adicionou o app controle de rede e melhorou a calculadora
+5.30: melhorou a calculadora, corrigiu o bug do pyOS_proc para apps e Renomeiou o pyOS_proc para apps para pyOS_appproc para evitar conflitos com o pyOS_proc do sistema

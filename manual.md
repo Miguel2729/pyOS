@@ -1,4 +1,4 @@
-# 🛠 Manual de Instalação e Uso — pyOS v5.29
+# 🛠 Manual de Instalação e Uso — pyOS v5.30
 
 ## 📥 Instalação
 
@@ -39,7 +39,7 @@
 
 #### 1. 🧮 Calculadora
 - Digite `calculadora` para abrir
-- Operações: `+`, `-`, `*`, `/`
+- Operações: `+`, `-`, `*`, `/`, `**`, `//`
 - Exemplo: `5 + 3`
 
 #### 2. 📝 Notepad

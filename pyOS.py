@@ -111,15 +111,15 @@ print(Fore.YELLOW + "trabalhando em atualizaçoes...")
 os.system("pip install --upgrade pip")
 time.sleep(8)
 os.system("clear")
-if not os.path.exists("./pyOS"):
-	print("⛔️ a pasta ./pyOS esta ausente, o pyOS não funcionara corretamente")
-	opcao = input("[1] entra mesmo assim [2] desligar: ")
-	if opcao == "1":
-		pass
-	elif opcao == "2":
-		quit()
-	else:
-		quit()
+if os.path.exists("./syscreated.txt") and not os.path.exists("./pyOS"):
+    print("⛔️ a pasta ./pyOS esta ausente, o pyOS não funcionara corretamente")
+    opcao = input("[1] entra mesmo assim [2] desligar: ")
+    if opcao == "1":
+        pass
+    elif opcao == "2":
+        quit()
+    else:
+        quit()
 
 def instalar_modulos():
 	diratual = os.getcwd()

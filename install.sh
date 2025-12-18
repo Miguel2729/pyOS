@@ -50,7 +50,7 @@ fi
 
 # Instalar dependências Python
 echo "🐍 Instalando dependências Python..."
-pip3 install --user colorama requests beautifulsoup4 pyfiglet
+pip3 install --user colorama requests pyfiglet
 
 # Opcionais (pergunta ao usuário)
 read -p "📸 Instalar suporte a imagens (Pillow)? [s/N]: " img
@@ -64,6 +64,18 @@ if [[ $voz =~ ^[Ss]$ ]]; then
     echo "⚠️  Pode precisar de: sudo apt install portaudio19-dev (Debian)"
 fi
 
+read -p "🌐 instalar suporte a sites? [s/N]: " sites
+if [[ $sites =~ ^[Ss]$ ]]; then
+    pip3 install --user beautifulsoup4
+    echo "⚠️ pode precisar de: sudo apt install portaudio19-dev (Debian)"
+fi
+
+read -p "🔊instalar suporte a reprodução de áudio e gravação de áudio? [s/N 
+]: " áudio
+
+if [[ $audio =~ ^[Ss]$ ]]; then
+    pip3 install --user pyaudio
+
 echo ""
 echo "✅ INSTALAÇÃO COMPLETA!"
 echo "======================="
@@ -72,6 +84,6 @@ echo "  cd pyOS"
 echo "  python3 pyOS.py"
 echo ""
 echo "Dicas:"
-echo "  • Use 'func' no menu para opções do sistema"
+echo "  •Use 'func' no menu para opções do sistema"
 echo "  • 'terminal' abre um terminal protegido"
 echo "  • 'quit' para sair"

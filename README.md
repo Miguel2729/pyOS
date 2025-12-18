@@ -15,7 +15,7 @@ o sistema está sobe licença MIT
 ## ⚙️ funcionalidades:
 | funcionalidade/grupo de funcionalidades | descrição/mais informações |
 | --------------------------------------- | -------------------------- |
-| apps | terminal, gerenciador de tarefas, gerenciador de arquivos, calculadora, notepad, appsInstalados, navegador, mensagens, gerenciador de tarefas, fotos, também pode instalar apps |
+| apps | terminal, gerenciador de tarefas, gerenciador de arquivos, calculadora, notepad, appsInstalados, navegador, mensagens, gerenciador de tarefas, fotos, etc..., também pode instalar apps |
 | sistema | processos em background, funções(hora, fechar, Python, hostsys) |
 | interface | interface gráfica baseada em texto sem ser só CLI, compatível com terminal e ide |
 

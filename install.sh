@@ -76,6 +76,11 @@ read -p "🔊instalar suporte a reprodução de áudio e gravação de áudio? [
 if [[ $audio =~ ^[Ss]$ ]]; then
     pip3 install --user pyaudio
 
+read -p "🎯 instalar suporte a gerenciamento de processos do sistema real?(psutil) [s/N]: " proc
+if [[ $proc =~ ^[Ss]$ ]]; then
+    pip3 install --usar psutil
+fi
+
 echo ""
 echo "✅ INSTALAÇÃO COMPLETA!"
 echo "======================="

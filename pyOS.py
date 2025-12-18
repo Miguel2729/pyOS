@@ -1308,8 +1308,9 @@ def fileManager():
 
         else:
             print("⚠️ Opção inválida.")
-
+aeac = {}
 def appsInstalados():
+	global aeac
 	def deps(arquivopython):
 		dependencias = set()
 		with open(arquivopython, 'r', encoding='utf-8') as f:
@@ -1327,7 +1328,7 @@ def appsInstalados():
 
 		return list(dependencias)
 	
-	aeac = {}
+	
 	while True:
 		print("opcoes:\n1. instalar dependencias dos apps\n2. executar apps\n3. ver dependencias de apps\n4. instalar apps simples\n5. instalar dependencias no python dir\n6. instalar app completo\n7. executar apps completos\n8. definir arquivos python para apps completos\n9. ver arquivos de apps completos\n0. sair")
 		acao = input("acao: ")
@@ -1347,14 +1348,19 @@ def appsInstalados():
 				try:
 					# CORREÇÃO: Adicionar o path correto para apps/libs
 					libs_path = os.path.abspath("./apps/libs")
+					
+					res_path = os.path.abspath("./pyOS/systemRes")
+					
 					if libs_path not in sys.path:
 						sys.path.insert(0, libs_path)
+					if res_path not in sys.path:
+						sys.path.insert(0, res_path)
 					
 					with open(app_path, 'r', encoding='utf-8') as f:
 						codigo_app = f.read()
 					
 					# Executar o código do app
-					exec(codigo_app, globals())
+					exec(codigo_app, {"__builtins__": __builtins__}, {})
 				except Exception as e:
 					print(f"Erro ao executar app: {e}")
 					time.sleep(3)
@@ -2833,7 +2839,366 @@ def abrirEditor():
 
 
 		
-
+def audio():
+    """
+    App de áudio - Gravar e reproduzir arquivos de áudio
+    """
+    import os
+    import time
+    import wave
+    import pyaudio
+    import threading
+    
+    # Configurações
+    AUDIO_DIR = "./audio_files"
+    os.makedirs(AUDIO_DIR, exist_ok=True)
+    
+    # Verificar se pyaudio está instalado
+    try:
+        import pyaudio
+    except ImportError:
+        print("📦 PyAudio não encontrado. Instalando...")
+        try:
+            import sys
+            import subprocess
+            
+            # Instalar PyAudio
+            subprocess.check_call([sys.executable, "-m", "pip", "install", "pyaudio"])
+            
+            # No Linux pode precisar de dependências extras
+            if os.name != 'nt':
+                try:
+                    subprocess.check_call(["sudo", "apt-get", "install", "portaudio19-dev", "-y"])
+                except:
+                    try:
+                        subprocess.check_call(["sudo", "pacman", "-S", "portaudio", "--noconfirm"])
+                    except:
+                        pass
+            
+            print("✅ PyAudio instalado com sucesso!")
+            import pyaudio
+        except Exception as e:
+            print(f"❌ Erro ao instalar PyAudio: {e}")
+            print("Tente instalar manualmente:")
+            print("  pip install pyaudio")
+            print("Para Linux, talvez precise: sudo apt-get install portaudio19-dev")
+            time.sleep(3)
+            return
+    
+    def listar_audios():
+        """Lista todos os arquivos de áudio disponíveis"""
+        arquivos = []
+        for arquivo in os.listdir(AUDIO_DIR):
+            if arquivo.endswith('.wav'):
+                caminho = os.path.join(AUDIO_DIR, arquivo)
+                tamanho = os.path.getsize(caminho)
+                tamanho_mb = tamanho / (1024 * 1024)
+                arquivos.append((arquivo, tamanho_mb))
+        
+        return arquivos
+    
+    def gravar_audio():
+        """Grava áudio do microfone e salva em arquivo WAV"""
+        print("🎤 GRAVAR ÁUDIO")
+        print("-" * 40)
+        
+        # Configurações de gravação
+        FORMAT = pyaudio.paInt16  # 16-bit resolution
+        CHANNELS = 1              # Mono
+        RATE = 44100              # 44.1kHz sample rate
+        CHUNK = 1024              # Tamanho do buffer
+        
+        nome_arquivo = input("Nome do arquivo (sem .wav): ").strip()
+        if not nome_arquivo:
+            print("❌ Nome inválido!")
+            return
+        
+        nome_arquivo = nome_arquivo + ".wav"
+        caminho_arquivo = os.path.join(AUDIO_DIR, nome_arquivo)
+        
+        # Verificar se arquivo já existe
+        if os.path.exists(caminho_arquivo):
+            print(f"⚠️  Arquivo '{nome_arquivo}' já existe!")
+            sobrescrever = input("Sobrescrever? (s/n): ").lower()
+            if sobrescrever != 's':
+                return
+        
+        duracao = input("Duração da gravação em segundos (ou Enter para 10s): ").strip()
+        if duracao and duracao.isdigit():
+            RECORD_SECONDS = int(duracao)
+        else:
+            RECORD_SECONDS = 10
+        
+        print(f"\n🎙️  Preparando para gravar {RECORD_SECONDS} segundos...")
+        print("Pressione Enter para começar...")
+        input()
+        
+        try:
+            # Inicializar PyAudio
+            audio = pyaudio.PyAudio()
+            
+            # Configurar stream de gravação
+            stream = audio.open(
+                format=FORMAT,
+                channels=CHANNELS,
+                rate=RATE,
+                input=True,
+                frames_per_buffer=CHUNK
+            )
+            
+            print(f"\n🔴 GRAVANDO... (Duração: {RECORD_SECONDS}s)")
+            print("Pressione Ctrl+C para parar antecipadamente")
+            print("-" * 40)
+            
+            frames = []
+            
+            # Barra de progresso simples
+            for i in range(0, int(RATE / CHUNK * RECORD_SECONDS)):
+                try:
+                    data = stream.read(CHUNK)
+                    frames.append(data)
+                    
+                    # Mostrar progresso a cada 10%
+                    progresso = int((i / (RATE / CHUNK * RECORT_SECONDS)) * 100)
+                    if progresso % 10 == 0 and i > 0:
+                        print(f"Progresso: {progresso}%", end='\r')
+                except KeyboardInterrupt:
+                    print("\n⏹️  Gravação interrompida pelo usuário")
+                    break
+                except Exception as e:
+                    print(f"\n⚠️  Erro durante gravação: {e}")
+                    break
+            
+            print("✅ Gravação concluída!")
+            
+            # Parar stream
+            stream.stop_stream()
+            stream.close()
+            audio.terminate()
+            
+            # Salvar arquivo WAV
+            with wave.open(caminho_arquivo, 'wb') as wf:
+                wf.setnchannels(CHANNELS)
+                wf.setsampwidth(audio.get_sample_size(FORMAT))
+                wf.setframerate(RATE)
+                wf.writeframes(b''.join(frames))
+            
+            tamanho_mb = os.path.getsize(caminho_arquivo) / (1024 * 1024)
+            print(f"💾 Arquivo salvo: {nome_arquivo} ({tamanho_mb:.2f} MB)")
+            
+        except Exception as e:
+            print(f"❌ Erro durante gravação: {e}")
+        
+        input("\nPressione Enter para continuar...")
+    
+    def reproduzir_audio():
+        """Reproduz um arquivo de áudio WAV"""
+        print("🔊 REPRODUZIR ÁUDIO")
+        print("-" * 40)
+        
+        arquivos = listar_audios()
+        if not arquivos:
+            print("❌ Nenhum arquivo de áudio encontrado!")
+            print("Grave primeiro algum áudio.")
+            time.sleep(2)
+            return
+        
+        print("\n📋 Arquivos disponíveis:")
+        for i, (arquivo, tamanho) in enumerate(arquivos, 1):
+            print(f"{i:2d}. {arquivo} ({tamanho:.2f} MB)")
+        
+        try:
+            escolha = input("\nDigite o número ou nome do arquivo: ").strip()
+            
+            if escolha.isdigit():
+                index = int(escolha) - 1
+                if 0 <= index < len(arquivos):
+                    nome_arquivo = arquivos[index][0]
+                else:
+                    print("❌ Número inválido!")
+                    return
+            else:
+                if not escolha.endswith('.wav'):
+                    escolha += '.wav'
+                
+                # Verificar se arquivo existe
+                arquivos_nomes = [a[0] for a in arquivos]
+                if escolha not in arquivos_nomes:
+                    print(f"❌ Arquivo '{escolha}' não encontrado!")
+                    return
+                nome_arquivo = escolha
+            
+            caminho_arquivo = os.path.join(AUDIO_DIR, nome_arquivo)
+            
+            try:
+                # Abrir arquivo WAV
+                wf = wave.open(caminho_arquivo, 'rb')
+                
+                # Inicializar PyAudio
+                audio = pyaudio.PyAudio()
+                
+                # Configurar stream de reprodução
+                stream = audio.open(
+                    format=audio.get_format_from_width(wf.getsampwidth()),
+                    channels=wf.getnchannels(),
+                    rate=wf.getframerate(),
+                    output=True
+                )
+                
+                print(f"\n🎵 Reproduzindo: {nome_arquivo}")
+                print("Pressione Ctrl+C para parar")
+                print("-" * 40)
+                
+                # Ler e reproduzir dados em chunks
+                data = wf.readframes(1024)
+                while data:
+                    stream.write(data)
+                    data = wf.readframes(1024)
+                
+                # Finalizar
+                stream.stop_stream()
+                stream.close()
+                audio.terminate()
+                wf.close()
+                
+                print("✅ Reprodução concluída!")
+                
+            except KeyboardInterrupt:
+                print("\n⏹️  Reprodução interrompida pelo usuário")
+                try:
+                    stream.stop_stream()
+                    stream.close()
+                    audio.terminate()
+                    wf.close()
+                except:
+                    pass
+            
+            except Exception as e:
+                print(f"❌ Erro durante reprodução: {e}")
+        
+        except Exception as e:
+            print(f"❌ Erro: {e}")
+        
+        input("\nPressione Enter para continuar...")
+    
+    def deletar_audio():
+        """Deleta um arquivo de áudio"""
+        print("🗑️  DELETAR ÁUDIO")
+        print("-" * 40)
+        
+        arquivos = listar_audios()
+        if not arquivos:
+            print("❌ Nenhum arquivo para deletar!")
+            return
+        
+        print("\n📋 Arquivos disponíveis:")
+        for i, (arquivo, tamanho) in enumerate(arquivos, 1):
+            print(f"{i:2d}. {arquivo} ({tamanho:.2f} MB)")
+        
+        try:
+            escolha = input("\nDigite o número ou nome do arquivo: ").strip()
+            
+            if escolha.isdigit():
+                index = int(escolha) - 1
+                if 0 <= index < len(arquivos):
+                    nome_arquivo = arquivos[index][0]
+                else:
+                    print("❌ Número inválido!")
+                    return
+            else:
+                if not escolha.endswith('.wav'):
+                    escolha += '.wav'
+                
+                # Verificar se arquivo existe
+                arquivos_nomes = [a[0] for a in arquivos]
+                if escolha not in arquivos_nomes:
+                    print(f"❌ Arquivo '{escolha}' não encontrado!")
+                    return
+                nome_arquivo = escolha
+            
+            caminho_arquivo = os.path.join(AUDIO_DIR, nome_arquivo)
+            
+            confirmar = input(f"\n⚠️  Tem certeza que deseja deletar '{nome_arquivo}'? (s/n): ").lower()
+            if confirmar == 's':
+                os.remove(caminho_arquivo)
+                print(f"✅ Arquivo '{nome_arquivo}' deletado com sucesso!")
+            else:
+                print("❌ Operação cancelada!")
+        
+        except Exception as e:
+            print(f"❌ Erro: {e}")
+        
+        input("\nPressione Enter para continuar...")
+    
+    def info_audio():
+        """Mostra informações técnicas sobre os arquivos de áudio"""
+        print("📊 INFORMAÇÕES TÉCNICAS")
+        print("-" * 40)
+        
+        arquivos = listar_audios()
+        if not arquivos:
+            print("❌ Nenhum arquivo de áudio encontrado!")
+            return
+        
+        print(f"\nTotal de arquivos: {len(arquivos)}")
+        print("-" * 40)
+        
+        for arquivo, tamanho_mb in arquivos:
+            caminho = os.path.join(AUDIO_DIR, arquivo)
+            try:
+                with wave.open(caminho, 'rb') as wf:
+                    print(f"\n📁 {arquivo}")
+                    print(f"  Tamanho: {tamanho_mb:.2f} MB")
+                    print(f"  Canais: {wf.getnchannels()} {'(Mono)' if wf.getnchannels() == 1 else '(Estéreo)'}")
+                    print(f"  Sample Width: {wf.getsampwidth()} bytes")
+                    print(f"  Frame Rate: {wf.getframerate()} Hz")
+                    print(f"  Frames: {wf.getnframes()}")
+                    duracao = wf.getnframes() / wf.getframerate()
+                    print(f"  Duração: {duracao:.2f} segundos")
+            except Exception as e:
+                print(f"  ❌ Erro ao ler arquivo: {e}")
+        
+        input("\nPressione Enter para continuar...")
+    
+    # Menu principal
+    while True:
+        print("\n" + "="*50)
+        print("🎵 APP DE ÁUDIO - pyOS")
+        print("="*50)
+        
+        arquivos = listar_audios()
+        if arquivos:
+            print(f"\n📁 Arquivos disponíveis: {len(arquivos)}")
+            for arquivo, tamanho in arquivos[:3]:  # Mostra apenas os 3 primeiros
+                print(f"  • {arquivo} ({tamanho:.2f} MB)")
+            if len(arquivos) > 3:
+                print(f"  ... e mais {len(arquivos)-3} arquivos")
+        else:
+            print("\n📭 Nenhum arquivo de áudio ainda")
+        
+        print("\n📋 MENU:")
+        print("1. 🎤 Gravar áudio")
+        print("2. 🔊 Reproduzir áudio")
+        print("3. 📊 Informações técnicas")
+        print("4. 🗑️  Deletar arquivo")
+        print("0. ↩️  Voltar ao menu principal")
+        
+        opcao = input("\nEscolha uma opção: ").strip()
+        
+        if opcao == "1":
+            gravar_audio()
+        elif opcao == "2":
+            reproduzir_audio()
+        elif opcao == "3":
+            info_audio()
+        elif opcao == "4":
+            deletar_audio()
+        elif opcao == "0":
+            print("👋 Voltando ao menu principal...")
+            break
+        else:
+            print("❌ Opção inválida!")
+            time.sleep(1)
 
 
 apps = {
@@ -2850,7 +3215,8 @@ apps = {
 	"diagnostico de rede": diagnosticar_rede,
 	"agenda": agenda,
 	"controle de internet": internet_control,
-	"python": python3
+	"python": python3,
+	"audio": audio
 }
 
 try:
@@ -2884,6 +3250,7 @@ while executando:
 			print(nomes[i + 3])
 		else:
 			print()
+	print()
 	app = input("app: ")
 	os.system("clear")
 	if app == "func":

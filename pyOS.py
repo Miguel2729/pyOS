@@ -10,6 +10,8 @@ except ModuleNotFoundError:
 	except ModuleNotFoundError:
 		print("erro as instalar")
 		quit()
+
+import colorama
 import time
 import random
 import json
@@ -23,8 +25,13 @@ import time
 import threading
 import shutil
 import traceback
-version = "v5.30"
-versionparts = [5, 30]
+import tempfile
+import curses
+from pathlib import Path
+import colorama
+versionparts = [5, 31]
+version = "v{versionparts[0]}.{versionparts[1]}"
+dir_original = os.getcwd()
 
 def criar_barra(msg):
 	try:
@@ -751,25 +758,42 @@ def resize_image(image, new_width=80):
     new_height = int(new_width * ratio)
     return image.resize((new_width, new_height))
 
-def grayify(image):
-    return image.convert("L")
+def rgb_to_ansi(r, g, b):
+    return f"\\033[38;2;{r};{g};{b}m"
 
-def pixels_to_ascii(image):
+def pixels_to_ascii_colored(image):
     pixels = image.getdata()
-    ascii_str = "".join([ASCII_CHARS[pixel // 25] for pixel in pixels])
+    ascii_str = ""
+    for pixel in pixels:
+        if isinstance(pixel, tuple):
+            r, g, b = pixel[:3]
+            char = ASCII_CHARS[sum(pixel[:3]) // 75]
+            ansi_color = rgb_to_ansi(r, g, b)
+            ascii_str += f"{ansi_color}{char}"
+        else:
+            char = ASCII_CHARS[pixel // 25]
+            ascii_str += char
     return ascii_str
 
 def display_ascii_image(path):
     if not os.path.exists(path):
         print("❌ Caminho da imagem inválido.")
         return
-    image = Image.open(path)
-    image = resize_image(image)
-    image = grayify(image)
-    ascii_str = pixels_to_ascii(image)
-    img_width = image.width
-    ascii_img = "\\n".join([ascii_str[i:i+img_width] for i in range(0, len(ascii_str), img_width)])
-    print(Fore.GREEN + ascii_img)
+    
+    try:
+        image = Image.open(path)
+        image = resize_image(image)
+        
+        if image.mode != 'RGB':
+            image = image.convert('RGB')
+            
+        ascii_str = pixels_to_ascii_colored(image)
+        img_width = image.width
+        ascii_img = "\\n".join([ascii_str[i:i+img_width] for i in range(0, len(ascii_str), img_width)])
+        print(ascii_img + "\\033[0m")
+        
+    except Exception as e:
+        print(f"❌ Erro ao processar imagem: {e}")
 ''',
 
         "device_comm.py": '''import platform
@@ -789,6 +813,11 @@ def list_devices():
         print("❌ Sistema não suportado para comunicação com dispositivos.")
 '''
     }
+
+    for nome, conteudo in arquivos.items():
+        with open(f"./pyOS/systemRes/{nome}", "w", encoding="utf-8") as f:
+            f.write(conteudo)
+    print("✅ Recursos do sistema gerados com sucesso.")
 
     for nome, conteudo in arquivos.items():
         with open(f"./pyOS/systemRes/{nome}", "w", encoding="utf-8") as f:
@@ -874,6 +903,7 @@ def calculadora():
 	print("subtrair: -")
 	print("divisão inteira: //")
 	print("potencia: **")
+	print('resto de divisao: %')
 	try:
 		# apenas numeros
 		n1 = float(input("numero 1: "))
@@ -889,8 +919,10 @@ def calculadora():
 		time.sleep(5)
 		return
 	# apenas operadores validos
-	elif op == "/" or op == "*" or op == "+" or op == "-" or op == "//" or op == "**":
+	elif op == "/" or op == "*" or op == "+" or op == "-" or op == "//" or op == "**" or op == "%":
 		res = pyOS_calc.calc(n1, op, n2)
+		if str(res).endswith(".0"):
+			res = int(res)
 		print(res)
 	else:
 		print("operador invalído!")
@@ -1025,9 +1057,10 @@ def terminal():
     executing = True
     while executing:
         diret = os.getcwd()
-        coman = input(f"{diret}~$")
+        coman = input(Fore.CYAN + f"{__import__('socket').gethostname()}@{os.getlogin()} {diret}>" + Fore.RESET)
         
         if coman == "quit":
+            os.chdir(dir_original)
             executing = False
             
         elif coman.startswith("cd "):
@@ -1035,7 +1068,11 @@ def terminal():
             os.chdir(dire)
         elif coman == "unlock_sys":
             apps["system-mgr"] = sysmgr
-            
+            print("system-mgr unlocked")
+        elif coman.startswith("noProtection "):
+            os.system(coman[len("noProtection "):])
+         
+        
         else:
             # Lista de comandos perigosos bloqueados
             comandos_perigosos = [
@@ -1074,7 +1111,7 @@ def terminal():
                 "cat senha.txt"
                 "rm -rf pyOS",
                 "rm -r pyOS",
-                "rm -rv pyOS"
+                "rm -rv pyOS",
             ]
             
             # Comandos que só são permitidos dentro do diretório do pyOS
@@ -1115,8 +1152,7 @@ def terminal():
                 "/sys/",
                 "/proc/",
                 "/dev/sda",
-                "/dev/sdb",
-                "/dev/null"
+                "/dev/sdb"
             ]
             
             if not comando_perigoso:
@@ -2229,26 +2265,9 @@ def internet_control():
 			
 def abrirapp(app):
 	os.system("clear")
-	try:
-		importlib.reload(pyOS_system)
-	except Exception:
-		# Remove do sys.modules primeiro
-		if "pyOS_system" in sys.modules:
-			del sys.modules["pyOS_system"]
-		# Remove do escopo global se existir
-		if 'pyOS_system' in globals():
-			del globals()['pyOS_system']
-		# Remove do escopo local se existir
-		if 'pyOS_system' in locals():
-			del locals()['pyOS_system']
-		pass
 	
-	espaco = "                 "
 	try:
-		print(f'{app}{espaco}{pyOS_system.winbtn}')
-	except Exception:
-		print(f'{app}{espaco}? ? ?')
-	try:
+		criar_barra(app)
 		apps[app]()
 	except KeyError:
 		print(Fore.RED + "app não encontrado")
@@ -2455,6 +2474,368 @@ def agenda():
         
         input("\nPressione Enter para continuar...")
 
+def python3():
+	global pydir
+	print("""1. ver versao do python
+2. abrir editor
+3. instalar biblioteca
+0. sair
+""")
+	while True:
+		esc = input("opcao: ")
+		if esc == "1":
+			os.system(f"python --version")
+		elif esc == "2":
+			abrirEditor()
+		elif esc == "0":
+			break
+		elif esc == "3":
+			pacote = input("pacote: ")
+			res = subprocess.run(["pip", "install", pacote], shell=True, text=True)
+			if res.stderr:
+				print("erro")
+			else:
+				print("pacote instalado com sucesso, reiniciando...")
+				os.execv(sys.executable, ['python3'] + sys.argv)
+
+
+
+
+import os
+import sys
+import tempfile
+import curses
+import colorama
+
+def abrirEditor():
+    """
+    Abre um editor de código TUI para Python
+    Usa o Python do sistema e os.system para compatibilidade com input()
+    """
+    # Inicializa colorama
+    colorama.init()
+    
+    def main(stdscr):
+        # Configurações iniciais do curses
+        curses.curs_set(1)  # Mostra cursor
+        stdscr.clear()
+        
+        # Cores (simples, sem syntax highlighting complexo)
+        curses.start_color()
+        curses.init_pair(1, curses.COLOR_WHITE, curses.COLOR_BLACK)  # Normal
+        curses.init_pair(2, curses.COLOR_CYAN, curses.COLOR_BLACK)   # Título
+        curses.init_pair(3, curses.COLOR_GREEN, curses.COLOR_BLACK)  # Status
+        curses.init_pair(4, curses.COLOR_YELLOW, curses.COLOR_BLACK) # Aviso
+        
+        # Dados do editor
+        texto = [""]  # Lista de linhas
+        arquivo_atual = None
+        linha_atual = 0
+        coluna_atual = 0
+        mostrar_ajuda = True
+        
+        def desenhar_interface():
+            """Desenha a interface do editor"""
+            height, width = stdscr.getmaxyx()
+            
+            # Área de título
+            stdscr.attron(curses.color_pair(2))
+            titulo = "Editor Python - F1: Ajuda | F2: Salvar | F3: Abrir | F4: Executar | F10: Sair"
+            stdscr.addstr(0, 0, titulo[:width-1])
+            stdscr.attroff(curses.color_pair(2))
+            
+            # Informação do arquivo
+            status = f"Arquivo: {arquivo_atual or 'Não salvo'} | Python: {sys.executable}"
+            stdscr.attron(curses.color_pair(3))
+            stdscr.addstr(1, 0, status[:width-1])
+            stdscr.attroff(curses.color_pair(3))
+            
+            # Área de edição (começa na linha 3)
+            edit_y = 3
+            edit_height = height - 6
+            edit_width = width - 1
+            
+            # Desenha as linhas do texto
+            stdscr.attron(curses.color_pair(1))
+            for i in range(edit_height):
+                line_y = edit_y + i
+                if line_y >= height:
+                    break
+                    
+                if i < len(texto):
+                    # Mostra número da linha
+                    num_linha = f"{i+1:3d} "
+                    try:
+                        stdscr.addstr(line_y, 0, num_linha)
+                    except:
+                        pass
+                    
+                    # Mostra conteúdo da linha
+                    linha = texto[i]
+                    if len(linha) > edit_width - 5:
+                        linha = linha[:edit_width - 8] + "..."
+                    
+                    try:
+                        stdscr.addstr(line_y, 4, linha)
+                    except:
+                        pass
+                    
+                    # Limpa o resto da linha
+                    for x in range(len(num_linha) + len(linha), edit_width):
+                        try:
+                            stdscr.addch(line_y, x, ' ')
+                        except:
+                            pass
+                else:
+                    # Linha vazia
+                    try:
+                        stdscr.addstr(line_y, 0, f"{i+1:3d} ")
+                    except:
+                        pass
+            
+            # Posiciona cursor
+            try:
+                stdscr.move(edit_y + linha_atual, min(4 + coluna_atual, width - 2))
+            except:
+                pass
+            
+            # Barra de ajuda/status
+            if mostrar_ajuda:
+                ajuda_y = height - 2
+                ajuda = "↑↓←→: Navegar | Entrar: Nova linha | Backspace: Apagar | Ctrl+S: Salvar | Ctrl+O: Abrir | Ctrl+R: Executar"
+                stdscr.attron(curses.color_pair(4))
+                try:
+                    stdscr.addstr(ajuda_y, 0, ajuda[:width-1])
+                except:
+                    pass
+                stdscr.attroff(curses.color_pair(4))
+            
+            # Barra de status do cursor
+            status_cursor = f"Linha: {linha_atual+1}/{len(texto)} Col: {coluna_atual+1}"
+            try:
+                stdscr.addstr(height-1, 0, status_cursor[:width-1])
+            except:
+                pass
+            
+            stdscr.refresh()
+        
+        def salvar_arquivo():
+            """Salva o texto em um arquivo"""
+            nonlocal arquivo_atual
+            
+            height, width = stdscr.getmaxyx()
+            
+            # Se não tem arquivo atual, pede nome
+            if not arquivo_atual:
+                stdscr.addstr(height-1, 0, "Nome do arquivo (com .py): ")
+                stdscr.refresh()
+                
+                curses.echo()
+                nome = ""
+                try:
+                    nome = stdscr.getstr(height-1, 23, width-24).decode('utf-8')
+                except:
+                    pass
+                curses.noecho()
+                
+                if nome:
+                    arquivo_atual = nome
+            
+            # Salva o arquivo
+            if arquivo_atual:
+                try:
+                    with open(arquivo_atual, 'w', encoding='utf-8') as f:
+                        f.write('\n'.join(texto))
+                    
+                    # Mensagem de sucesso
+                    mensagem = f"Arquivo salvo: {arquivo_atual}"
+                    stdscr.addstr(height-1, 0, " " * (width-1))
+                    stdscr.addstr(height-1, 0, mensagem[:width-1])
+                    stdscr.refresh()
+                    stdscr.getch()
+                    return True
+                except Exception as e:
+                    mensagem = f"Erro ao salvar: {str(e)}"
+                    stdscr.addstr(height-1, 0, " " * (width-1))
+                    stdscr.addstr(height-1, 0, mensagem[:width-1])
+                    stdscr.refresh()
+                    stdscr.getch()
+            
+            return False
+        
+        def abrir_arquivo():
+            """Abre um arquivo existente"""
+            nonlocal texto, arquivo_atual
+            
+            height, width = stdscr.getmaxyx()
+            
+            stdscr.addstr(height-1, 0, "Nome do arquivo para abrir: ")
+            stdscr.refresh()
+            
+            curses.echo()
+            nome = ""
+            try:
+                nome = stdscr.getstr(height-1, 27, width-28).decode('utf-8')
+            except:
+                pass
+            curses.noecho()
+            
+            if nome and os.path.exists(nome):
+                try:
+                    with open(nome, 'r', encoding='utf-8') as f:
+                        texto = f.read().splitlines()
+                    
+                    arquivo_atual = nome
+                    
+                    # Mensagem de sucesso
+                    mensagem = f"Arquivo aberto: {nome}"
+                    stdscr.addstr(height-1, 0, " " * (width-1))
+                    stdscr.addstr(height-1, 0, mensagem[:width-1])
+                    stdscr.refresh()
+                    stdscr.getch()
+                    return True
+                except Exception as e:
+                    mensagem = f"Erro ao abrir: {str(e)}"
+                    stdscr.addstr(height-1, 0, " " * (width-1))
+                    stdscr.addstr(height-1, 0, mensagem[:width-1])
+                    stdscr.refresh()
+                    stdscr.getch()
+            
+            return False
+        
+        def executar_codigo():
+            """Executa o código Python usando os.system para compatibilidade com input()"""
+            nonlocal texto
+            
+            # Cria um arquivo temporário
+            with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False) as f:
+                f.write('\n'.join(texto))
+                temp_file = f.name
+            
+            try:
+                # Sai do modo curses temporariamente para executar
+                curses.endwin()
+                
+                print(f"\n{'='*60}")
+                print("Executando código Python (pressione Ctrl+C para interromper)...")
+                print(f"{'='*60}\n")
+                
+                # Executa com os.system - mantém stdin/stdout conectados ao terminal
+                comando = f'"{sys.executable}" "{temp_file}"'
+                return_code = os.system(comando)
+                
+                print(f"\n{'='*60}")
+                print(f"Programa finalizado com código de retorno: {return_code}")
+                print(f"{'='*60}")
+                
+                input("\nPressione Enter para voltar ao editor...")
+                
+            except KeyboardInterrupt:
+                print("\n\n[Execução interrompida pelo usuário]")
+                input("\nPressione Enter para voltar ao editor...")
+            except Exception as e:
+                print(f"\nErro durante execução: {e}")
+                input("\nPressione Enter para voltar ao editor...")
+            finally:
+                # Volta para o modo curses
+                stdscr.refresh()
+                
+                # Remove arquivo temporário
+                try:
+                    os.unlink(temp_file)
+                except:
+                    pass
+        
+        # Loop principal do editor
+        while True:
+            desenhar_interface()
+            
+            try:
+                key = stdscr.getch()
+            except:
+                break
+            
+            # Processa teclas
+            if key == curses.KEY_F10 or key == 27:  # F10 ou ESC
+                break
+            elif key == curses.KEY_F1:
+                mostrar_ajuda = not mostrar_ajuda
+            elif key == curses.KEY_F2 or key == 19:  # F2 ou Ctrl+S (ASCII 19)
+                salvar_arquivo()
+            elif key == curses.KEY_F3 or key == 15:  # F3 ou Ctrl+O (ASCII 15)
+                abrir_arquivo()
+            elif key == curses.KEY_F4 or key == 18:  # F4 ou Ctrl+R (ASCII 18)
+                executar_codigo()
+            
+            # Navegação e edição
+            elif key == curses.KEY_UP:
+                if linha_atual > 0:
+                    linha_atual -= 1
+                    coluna_atual = min(coluna_atual, len(texto[linha_atual]))
+            elif key == curses.KEY_DOWN:
+                if linha_atual < len(texto) - 1:
+                    linha_atual += 1
+                    coluna_atual = min(coluna_atual, len(texto[linha_atual]))
+            elif key == curses.KEY_LEFT:
+                if coluna_atual > 0:
+                    coluna_atual -= 1
+                elif linha_atual > 0:
+                    linha_atual -= 1
+                    coluna_atual = len(texto[linha_atual])
+            elif key == curses.KEY_RIGHT:
+                if coluna_atual < len(texto[linha_atual]):
+                    coluna_atual += 1
+                elif linha_atual < len(texto) - 1:
+                    linha_atual += 1
+                    coluna_atual = 0
+            elif key == curses.KEY_BACKSPACE or key == 127:
+                if coluna_atual > 0:
+                    # Remove caractere na posição atual
+                    linha = texto[linha_atual]
+                    texto[linha_atual] = linha[:coluna_atual-1] + linha[coluna_atual:]
+                    coluna_atual -= 1
+                elif linha_atual > 0:
+                    # Une com linha anterior
+                    linha_anterior = texto[linha_atual-1]
+                    linha_atual -= 1
+                    coluna_atual = len(linha_anterior)
+                    texto[linha_atual] += texto.pop(linha_atual+1)
+            elif key == curses.KEY_ENTER or key == 10:
+                # Quebra linha
+                linha_atual += 1
+                linha_antiga = texto[linha_atual-1]
+                texto.insert(linha_atual, linha_antiga[coluna_atual:])
+                texto[linha_atual-1] = linha_antiga[:coluna_atual]
+                coluna_atual = 0
+            elif 32 <= key <= 126:  # Caracteres imprimíveis
+                # Insere caractere
+                linha = texto[linha_atual]
+                texto[linha_atual] = linha[:coluna_atual] + chr(key) + linha[coluna_atual:]
+                coluna_atual += 1
+        
+        # Limpa colorama ao sair
+        colorama.deinit()
+        return '\n'.join(texto)
+    
+    # Executa o editor com curses
+    try:
+        return curses.wrapper(main)
+    except KeyboardInterrupt:
+        colorama.deinit()
+        print("\nEditor fechado.")
+        return ""
+    except Exception as e:
+        colorama.deinit()
+        print(f"Erro ao iniciar editor: {e}")
+        import traceback
+        traceback.print_exc()
+        return ""
+
+
+		
+
+
+
 apps = {
 	"calculadora": calculadora,
 	"notepad": notepad,
@@ -2468,10 +2849,12 @@ apps = {
 	"fotos": images,
 	"diagnostico de rede": diagnosticar_rede,
 	"agenda": agenda,
-	"controle de internet": internet_control
+	"controle de internet": internet_control,
+	"python": python3
 }
+
 try:
-	pyOS_proc.init
+	pyOS_proc.init()
 except Exception:
 	pass
 executando = True
@@ -2486,22 +2869,19 @@ while executando:
 	except Exception:
 		pass
 	
-	try:
-		print(f'python-executive                 {pyOS_system.winbtn}')
-	except Exception:
-		print(f'python-executive                 ? ? ?')
+	criar_barra("python-executive")
 	
 	print(Fore.CYAN + "=python==hora==fechar==hostsys=\n")
 	print(colorconfig + "apps:")
-	nomes = list(apps.keys())
-	nomes = list(apps.keys())
-	nomes = list(apps.keys())
-	for i in range(0, len(nomes), 3):
+	nomes = sorted(apps.keys())
+	for i in range(0, len(nomes), 4):
 		print(nomes[i], end='  ')
 		if i + 1 < len(nomes):
 			print(nomes[i + 1], end='  ')
 		if i + 2 < len(nomes):
-			print(nomes[i + 2])
+			print(nomes[i + 2], end="  ")
+		elif i + 3 < len(nomes):
+			print(nomes[i + 3])
 		else:
 			print()
 	app = input("app: ")
@@ -2510,10 +2890,7 @@ while executando:
 		os.system("clear")
 		print(colorconfig + "colorteste")
 		os.system("clear")
-		try:
-			print(f'python-executive                 {pyOS_system.winbtn}')
-		except Exception:
-			print(f'python-executive                 ? ? ?')
+		criar_barra("python-executive")
 		print(Fore.CYAN + "=python==hora==fechar==hostsys=")
 		funcesc = input("func: ")
 		if funcesc == "python":
@@ -2548,10 +2925,7 @@ while executando:
 			quit()
 		elif funcesc == "hostsys":
 			os.system("clear")
-			try:
-				print(f'python-executive                 {pyOS_system.winbtn}')
-			except Exception:
-				print(f'python-executive                 ? ? ?')
+			criar_barra("python-executive")
 			print(Fore.CYAN + "=python==hora==fechar==hostsys=")
 			print(Fore.CYAN + "                                                  desligar")
 			print(Fore.CYAN + "                                                  reiniciar")

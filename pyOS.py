@@ -3200,23 +3200,522 @@ def audio():
             print("❌ Opção inválida!")
             time.sleep(1)
 
+def processos_sistema():
+    """
+    App para gerenciar processos do sistema operacional real
+    Versão corrigida para problemas de permissão no Linux
+    """
+    import os
+    import sys
+    import time
+    import platform
+    from datetime import datetime
+    
+    def verificar_psutil():
+        """Verifica se psutil está instalado, se não, instala"""
+        try:
+            import psutil
+            return True
+        except ImportError:
+            print("📦 Instalando psutil para gerenciamento de processos...")
+            try:
+                import subprocess
+                subprocess.check_call([sys.executable, "-m", "pip", "install", "psutil"])
+                print("✅ psutil instalado com sucesso!")
+                import psutil
+                return True
+            except Exception as e:
+                print(f"❌ Erro ao instalar psutil: {e}")
+                return False
+    
+    def obter_info_sistema_segura():
+        """Obtém informações do sistema de forma segura (com tratamento de permissões)"""
+        print("\n" + "="*60)
+        print("💻 INFORMAÇÕES DO SISTEMA")
+        print("="*60)
+        
+        # Informações básicas sempre disponíveis
+        print(f"Sistema: {platform.system()} {platform.release()}")
+        print(f"Arquitetura: {platform.machine()}")
+        
+        try:
+            import psutil
+            
+            # CPU (com fallback)
+            try:
+                cpu_percent = psutil.cpu_percent(interval=0.5)
+                cpu_count = psutil.cpu_count()
+                print(f"CPU: {cpu_percent}% de uso ({cpu_count} núcleos)")
+            except (PermissionError, FileNotFoundError) as e:
+                print(f"CPU: Informação limitada (permissão negada)")
+            
+            # Memória (geralmente funciona mesmo sem permissões elevadas)
+            try:
+                mem = psutil.virtual_memory()
+                mem_total_gb = mem.total / (1024**3)
+                mem_used_gb = mem.used / (1024**3)
+                mem_percent = mem.percent
+                print(f"RAM: {mem_used_gb:.1f}GB / {mem_total_gb:.1f}GB ({mem_percent}%)")
+            except:
+                print(f"RAM: Informação não disponível")
+            
+            # Disco
+            try:
+                disk = psutil.disk_usage('/')
+                disk_total_gb = disk.total / (1024**3)
+                disk_used_gb = disk.used / (1024**3)
+                disk_percent = disk.percent
+                print(f"Disco: {disk_used_gb:.1f}GB / {disk_total_gb:.1f}GB ({disk_percent}%)")
+            except:
+                print("Disco: Informação não disponível")
+            
+            # Boot
+            try:
+                boot_time = datetime.fromtimestamp(psutil.boot_time())
+                uptime = datetime.now() - boot_time
+                print(f"Tempo ligado: {uptime}")
+            except:
+                pass
+                
+        except ImportError:
+            print("⚠️  psutil não disponível - informações limitadas")
+        
+        print("="*60)
+    
+    def listar_processos_seguro(tipo="todos", limite=20):
+        """Lista processos de forma segura, tratando erros de permissão"""
+        processos = []
+        
+        try:
+            import psutil
+            
+            if tipo == "ativos":
+                # Processos ativos (com tratamento de erro)
+                for proc in psutil.process_iter(['pid', 'name', 'cpu_percent', 'memory_percent']):
+                    try:
+                        pinfo = proc.info
+                        # Usar get() para evitar KeyError
+                        cpu = pinfo.get('cpu_percent', 0)
+                        mem = pinfo.get('memory_percent', 0)
+                        if cpu > 0.1 or mem > 0.1:
+                            processos.append(pinfo)
+                    except (psutil.NoSuchProcess, psutil.AccessDenied, PermissionError):
+                        continue
+                    except Exception:
+                        continue
+            
+            elif tipo == "usuário":
+                # Processos do usuário atual
+                current_user = None
+                try:
+                    current_user = psutil.Process().username()
+                except:
+                    pass
+                
+                if current_user:
+                    for proc in psutil.process_iter(['pid', 'name', 'username', 'cpu_percent']):
+                        try:
+                            pinfo = proc.info
+                            if pinfo.get('username') == current_user:
+                                processos.append(pinfo)
+                        except:
+                            continue
+            
+            else:  # todos
+                # Todos os processos que conseguimos acessar
+                for proc in psutil.process_iter(['pid', 'name', 'cpu_percent', 'memory_percent']):
+                    try:
+                        processos.append(proc.info)
+                    except (psutil.NoSuchProcess, psutil.AccessDenied, PermissionError):
+                        continue
+                    except Exception:
+                        continue
+        
+        except ImportError:
+            print("❌ psutil não está disponível")
+            return []
+        except Exception as e:
+            print(f"⚠️  Erro ao listar processos: {e}")
+            return []
+        
+        # Ordenar por uso de CPU (se disponível)
+        try:
+            processos.sort(key=lambda x: x.get('cpu_percent', 0), reverse=True)
+        except:
+            pass
+        
+        return processos[:limite]
+    
+    def mostrar_processos(processos):
+        """Mostra lista de processos formatada"""
+        if not processos:
+            print("❌ Nenhum processo encontrado ou permissão insuficiente")
+            return
+        
+        print("\n" + "="*90)
+        print(f"{'PID':^8} {'NOME':<35} {'CPU%':^6} {'MEM%':^6} {'STATUS':<10}")
+        print("="*90)
+        
+        for proc in processos:
+            pid = str(proc.get('pid', 'N/A'))
+            name = proc.get('name', 'Desconhecido')[:24]
+            cpu = f"{proc.get('cpu_percent', 0):.1f}" if proc.get('cpu_percent') is not None else "N/A"
+            mem = f"{proc.get('memory_percent', 0):.1f}" if proc.get('memory_percent') is not None else "N/A"
+            
+            # Tentar obter status (com tratamento de erro)
+            status = "N/A"
+            try:
+                import psutil
+                p = psutil.Process(proc['pid'])
+                status = p.status()[:9]
+            except:
+                pass
+            
+            print(f"{pid:^8} {name:<25} {cpu:^6} {mem:^6} {status:<10}")
+    
+    def detalhes_processo_seguro(pid):
+        """Mostra detalhes de um processo com tratamento de segurança"""
+        try:
+            import psutil
+            p = psutil.Process(pid)
+            
+            print(f"\n🔍 DETALHES DO PROCESSO PID: {pid}")
+            print("-" * 50)
+            
+            try:
+                print(f"Nome: {p.name()}")
+            except:
+                print("Nome: Acesso negado")
+            
+            try:
+                print(f"Usuário: {p.username()}")
+            except:
+                print("Usuário: Acesso negado")
+            
+            try:
+                print(f"Status: {p.status()}")
+            except:
+                print("Status: Acesso negado")
+            
+            # Recursos (com tratamento)
+            print(f"\n🔧 RECURSOS:")
+            try:
+                cpu_percent = p.cpu_percent(interval=0.1)
+                print(f"CPU: {cpu_percent}%")
+            except:
+                print("CPU: Acesso negado")
+            
+            try:
+                mem_info = p.memory_info()
+                print(f"Memória RSS: {mem_info.rss / (1024**2):.1f} MB")
+            except:
+                print("Memória: Acesso negado")
+            
+            print("-" * 50)
+            
+        except psutil.NoSuchProcess:
+            print(f"❌ Processo com PID {pid} não existe")
+        except (psutil.AccessDenied, PermissionError):
+            print(f"⚠️  Acesso negado ao processo {pid}")
+            print("   Execute com privilégios elevados (sudo) para mais informações")
+        except Exception as e:
+            print(f"❌ Erro: {e}")
+    
+    def matar_processo_seguro(pid):
+        """Tenta matar um processo com verificações de segurança"""
+        try:
+            import psutil
+            p = psutil.Process(pid)
+            
+            # Tentar obter nome (pode falhar por permissão)
+            nome = "Desconhecido"
+            try:
+                nome = p.name()
+            except:
+                pass
+            
+            print(f"\n⚠️  ATENÇÃO: Você está prestes a matar o processo:")
+            print(f"PID: {pid}")
+            print(f"Nome: {nome}")
+            
+            # Verificar se é um processo crítico do sistema
+            processos_criticos = ['systemd', 'init', 'kernel', 'Xorg', 'gnome-shell', 'plasmashell']
+            if any(critico in nome.lower() for critico in processos_criticos):
+                print("🚨 ALERTA: Este parece ser um processo crítico do sistema!")
+                print("   Matá-lo pode causar instabilidade ou travamento!")
+            
+            confirmar = input("\nTem certeza ABSOLUTA? (digite 'SIM' para confirmar): ")
+            
+            if confirmar.upper() == 'SIM':
+                print(f"Encerrando processo {pid}...")
+                
+                try:
+                    # Tenta terminar graciosamente
+                    p.terminate()
+                    time.sleep(1)
+                    
+                    # Verifica se ainda está rodando
+                    if p.is_running():
+                        print("Processo não respondeu, forçando...")
+                        try:
+                            p.kill()
+                        except:
+                            print("❌ Não foi possível forçar encerramento")
+                    
+                    print(f"✅ Processo {pid} encerrado")
+                    
+                except (psutil.AccessDenied, PermissionError):
+                    print("❌ Permissão negada. Execute com sudo/administrador")
+                except Exception as e:
+                    print(f"❌ Erro ao encerrar: {e}")
+            
+            else:
+                print("❌ Operação cancelada.")
+                
+        except psutil.NoSuchProcess:
+            print(f"❌ Processo com PID {pid} não existe")
+        except (psutil.AccessDenied, PermissionError):
+            print(f"⚠️  Acesso negado (execute com privilégios elevados)")
+        except Exception as e:
+            print(f"❌ Erro: {e}")
+    
+    def monitorar_recursos_seguro():
+        """Monitora recursos com tratamento de erros de permissão"""
+        print("\n📊 MONITOR DE RECURSOS - Pressione Ctrl+C para sair")
+        print("-" * 60)
+        
+        try:
+            import psutil
+        except ImportError:
+            print("❌ psutil não disponível para monitoramento")
+            return
+        
+        try:
+            update_count = 0
+            while True:
+                # Limpa a tela
+                print("\033[H\033[J", end="")
+                
+                print("📊 MONITOR DE RECURSOS EM TEMPO REAL")
+                print("-" * 60)
+                print(f"Atualização: #{update_count}")
+                
+                # CPU (com fallback)
+                try:
+                    cpu_percent = psutil.cpu_percent(interval=0.5)
+                    print(f"\n💻 CPU: {cpu_percent:.1f}%")
+                    bar_length = min(20, int(cpu_percent / 5))
+                    bar = "█" * bar_length + "░" * (20 - bar_length)
+                    print(f"  [{bar}]")
+                except:
+                    print("\n💻 CPU: Monitoramento não disponível")
+                
+                # Memória
+                try:
+                    mem = psutil.virtual_memory()
+                    mem_percent = mem.percent
+                    print(f"\n🧠 MEMÓRIA: {mem_percent:.1f}%")
+                    bar_length = min(20, int(mem_percent / 5))
+                    bar = "█" * bar_length + "░" * (20 - bar_length)
+                    print(f"  [{bar}] {mem.used / (1024**3):.1f}GB / {mem.total / (1024**3):.1f}GB")
+                except:
+                    print("\n🧠 MEMÓRIA: Monitoramento não disponível")
+                
+                # Processos (limitado devido a permissões)
+                try:
+                    processos = []
+                    for proc in psutil.process_iter(['pid', 'name', 'cpu_percent']):
+                        try:
+                            info = proc.info
+                            if info.get('cpu_percent', 0) > 1.0:  # > 1% CPU
+                                processos.append(info)
+                        except:
+                            continue
+                    
+                    # Ordenar e pegar top 5
+                    processos.sort(key=lambda x: x.get('cpu_percent', 0), reverse=True)
+                    
+                    if processos:
+                        print(f"\n🔥 PROCESSOS ATIVOS (top {min(3, len(processos))}):")
+                        for proc in processos[:3]:
+                            name = proc.get('name', 'N/A')[:20]
+                            cpu = proc.get('cpu_percent', 0)
+                            print(f"  {name:<20} CPU: {cpu:5.1f}%")
+                except:
+                    print("\n🔥 PROCESSOS: Monitoramento limitado")
+                
+                print(f"\n⏱️  {datetime.now().strftime('%H:%M:%S')} | Ctrl+C para parar")
+                
+                update_count += 1
+                time.sleep(2)
+                
+        except KeyboardInterrupt:
+            print("\n🛑 Monitoramento interrompido")
+        except Exception as e:
+            print(f"\n❌ Erro no monitoramento: {e}")
+    
+    def verificar_permissoes():
+        """Verifica se temos permissões adequadas"""
+        sistema = platform.system()
+        
+        print("\n🔐 VERIFICAÇÃO DE PERMISSÕES:")
+        print("-" * 40)
+        
+        if sistema == "Linux":
+            # Verifica se é root no Linux
+            if os.geteuid() == 0:
+                print("✅ Executando como root (sudo)")
+                print("   Acesso completo aos processos do sistema")
+                return True
+            else:
+                print("⚠️  Executando como usuário normal no Linux")
+                print("   Algumas informações podem ser limitadas")
+                print("\n💡 Dica: Execute com 'sudo' para acesso completo")
+                return False
+        elif sistema == "Windows":
+            # No Windows, verifica se é administrador
+            try:
+                import ctypes
+                is_admin = ctypes.windll.shell32.IsUserAnAdmin() != 0
+                if is_admin:
+                    print("✅ Executando como Administrador")
+                    return True
+                else:
+                    print("⚠️  Executando como usuário normal no Windows")
+                    print("   Alguns recursos podem ser limitados")
+                    return False
+            except:
+                print("ℹ️  Sistema Windows detectado")
+                return True
+        else:
+            print(f"ℹ️  Sistema {sistema} detectado")
+            return True
+    
+    # Verificar se psutil está instalado
+    if not verificar_psutil():
+        print("❌ Não é possível executar sem psutil.")
+        time.sleep(3)
+        return
+    
+    # Menu principal
+    while True:
+        print("\n" + "="*60)
+        print("🖥️  GERENCIADOR DE PROCESSOS DO SISTEMA")
+        print("="*60)
+        
+        # Verificar permissões
+        tem_permissao = verificar_permissoes()
+        
+        # Obter informações do sistema (de forma segura)
+        obter_info_sistema_segura()
+        
+        print("\n📋 MENU PRINCIPAL:")
+        print("1. 📋 Listar processos (acesso disponível)")
+        print("2. 🔥 Listar processos ativos")
+        print("3. 🔍 Detalhes de processo (por PID)")
+        print("4. 🚫 Matar processo (cuidado!)")
+        print("5. 📊 Monitorar recursos")
+        if not tem_permissao:
+            print("6. 💡 Dicas para acesso completo")
+        print("0. ↩️  Voltar ao menu principal")
+        
+        try:
+            opcao = input("\nEscolha uma opção: ").strip()
+            
+            if opcao == "1":
+                processos = listar_processos_seguro("todos", 100)
+                mostrar_processos(processos)
+                input("\nPressione Enter para continuar...")
+                
+            elif opcao == "2":
+                processos = listar_processos_seguro("ativos", 15)
+                mostrar_processos(processos)
+                input("\nPressione Enter para continuar...")
+                
+            elif opcao == "3":
+                try:
+                    pid_input = input("Digite o PID do processo (ou Enter para ver lista): ").strip()
+                    if pid_input:
+                        pid = int(pid_input)
+                        detalhes_processo_seguro(pid)
+                    else:
+                        # Mostrar lista primeiro
+                        processos = listar_processos_seguro("todos", 10)
+                        mostrar_processos(processos)
+                        try:
+                            pid = int(input("\nDigite o PID para detalhes: "))
+                            detalhes_processo_seguro(pid)
+                        except ValueError:
+                            print("❌ PID inválido")
+                except ValueError:
+                    print("❌ PID deve ser um número!")
+                input("\nPressione Enter para continuar...")
+                
+            elif opcao == "4":
+                try:
+                    pid_input = input("Digite o PID do processo a matar: ").strip()
+                    if pid_input:
+                        pid = int(pid_input)
+                        matar_processo_seguro(pid)
+                    else:
+                        print("❌ PID não pode estar vazio")
+                except ValueError:
+                    print("❌ PID deve ser um número!")
+                input("\nPressione Enter para continuar...")
+                
+            elif opcao == "5":
+                monitorar_recursos_seguro()
+                
+            elif opcao == "6" and not tem_permissao:
+                print("\n💡 DICAS PARA ACESSO COMPLETO:")
+                print("-" * 40)
+                sistema = platform.system()
+                if sistema == "Linux":
+                    print("No Linux, execute o pyOS com sudo:")
+                    print("  sudo python3 pyOS.py")
+                    print("\nOu execute apenas este app com sudo:")
+                    print("  sudo python3 -c 'import psutil; print(psutil.cpu_percent())'")
+                elif sistema == "Windows":
+                    print("No Windows, execute o terminal como Administrador:")
+                    print("  1. Clique direito no terminal/CMD")
+                    print("  2. Escolha 'Executar como Administrador'")
+                    print("  3. Execute o pyOS normalmente")
+                print("\n⚠️  ATENÇÃO: Execute com privilégios apenas se necessário!")
+                print("   Processos do sistema podem ser críticos.")
+                input("\nPressione Enter para continuar...")
+                
+            elif opcao == "0":
+                print("👋 Voltando ao menu principal...")
+                break
+                
+            else:
+                print("❌ Opção inválida!")
+                time.sleep(1)
+                
+        except KeyboardInterrupt:
+            print("\n\n⚠️  Operação interrompida pelo usuário")
+            break
+        except Exception as e:
+            print(f"❌ Erro: {e}")
+            time.sleep(2)
 
 apps = {
-	"calculadora": calculadora,
-	"notepad": notepad,
-	"config": config,
-	"terminal": terminal,
-	"gerenciador de arquivos": fileManager,
-	"appsInstalados": appsInstalados,
-	"navegador": navegador_tui,
-	"gerenciador de tarefas": taskmgr,
-	"mensagens": messages,
-	"fotos": images,
-	"diagnostico de rede": diagnosticar_rede,
-	"agenda": agenda,
-	"controle de internet": internet_control,
-	"python": python3,
-	"audio": audio
+    "calculadora": calculadora,
+    "notepad": notepad,
+    "config": config,
+    "terminal": terminal,
+    "gerenciador de arquivos": fileManager,
+    "appsInstalados": appsInstalados,
+    "navegador": navegador_tui,
+    "gerenciador de tarefas": taskmgr,
+    "mensagens": messages,
+    "fotos": images,
+    "diagnostico de rede": diagnosticar_rede,
+    "agenda": agenda,
+    "controle de internet": internet_control,
+    "python": python3,
+    "audio": audio,
+    "processos-sistema": processos_sistema
 }
 
 try:

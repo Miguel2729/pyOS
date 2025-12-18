@@ -71,14 +71,15 @@ if [[ $sites =~ ^[Ss]$ ]]; then
 fi
 
 read -p "🔊instalar suporte a reprodução de áudio e gravação de áudio? [s/N 
-]: " áudio
+]: " audio
 
 if [[ $audio =~ ^[Ss]$ ]]; then
     pip3 install --user pyaudio
+fi
 
 read -p "🎯 instalar suporte a gerenciamento de processos do sistema real?(psutil) [s/N]: " proc
 if [[ $proc =~ ^[Ss]$ ]]; then
-    pip3 install --usar psutil
+    pip3 install --user psutil
 fi
 
 echo ""

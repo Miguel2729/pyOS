@@ -30,7 +30,7 @@ import curses
 from pathlib import Path
 import colorama
 versionparts = [5, 31]
-version = "v{versionparts[0]}.{versionparts[1]}"
+version = f"v{versionparts[0]}.{versionparts[1]}"
 dir_original = os.getcwd()
 
 def criar_barra(msg):

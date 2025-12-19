@@ -136,3 +136,6 @@ O pyOS inclui um terminal **com propósito específico**:
 | **Requisitos sistema** | ✅ Mínimos | ✅ **Mínimos** | ❌ Altos |
 | **Instalação** | ✅ Já incluso | ✅ **Simples** | ⚠️ Complexa |
 | **Estabilidade** | ✅ Máxima | ✅ **Alta** | ⚠️ Variável |
+
+## aviso importante 
+pyOS não é um sistema operacional simulado e não tem essa intenção, ele é um tui que facilita o uso do Linux sem gui, pyOS é um nome dado porque ele tenta parecer um sistema operacional para ser mais amigável 

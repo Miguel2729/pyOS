@@ -82,6 +82,11 @@ if [[ $proc =~ ^[Ss]$ ]]; then
     pip3 install --user psutil
 fi
 
+read -p "▶️ deseja configurar o sistema para executar o pyOS automaticamente? [s/N]" autoexec
+if [[ $autoexec =~ ^[Ss]$ ]]; then
+    echo "cd $HOME/pyOS\npython3 pyOS.py" >> ./bashrc
+fi
+
 echo ""
 echo "✅ INSTALAÇÃO COMPLETA!"
 echo "======================="

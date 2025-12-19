@@ -7,24 +7,24 @@ echo "========================================================"
 if command -v apt &> /dev/null; then
     echo "📦 Distro: Debian/Ubuntu/Mint"
     sudo apt update
-    sudo apt install -y git python3 python3-pip portaudio19-dev
+    sudo apt install -y git python3 python3-pip portaudio19-dev python3-dev
     
 elif command -v pacman &> /dev/null; then
     echo "📦 Distro: Arch/Manjaro"
-    sudo pacman -Syu --noconfirm git python python-pip portaudio19-dev 
+    sudo pacman -Syu --noconfirm git python python-pip portaudio
     
 elif command -v dnf &> /dev/null; then
     echo "📦 Distro: Fedora/RHEL/CentOS"
-    sudo dnf install -y git python3 python3-pip portaudio19-dev
+    sudo dnf install -y git python3 python3-pip portaudio-devel python3-devel
     
 elif command -v zypper &> /dev/null; then
     echo "📦 Distro: openSUSE"
-    sudo zypper install -y git python3 python3-pip portaudio19-dev
+    sudo zypper install -y git python3 python3-pip portaudio-devel python3-devel
     
 elif command -v apk &> /dev/null; then
     echo "📦 Distro: Alpine"
     sudo apk update
-    sudo apk add git python3 py3-pip portaudio19-dev
+    sudo apk add git python3 py3-pip portaudio-dev
     
 elif command -v emerge &> /dev/null; then
     echo "📦 Distro: Gentoo"
@@ -67,12 +67,9 @@ fi
 read -p "🌐 instalar suporte a sites? [s/N]: " sites
 if [[ $sites =~ ^[Ss]$ ]]; then
     pip3 install --user beautifulsoup4
-    echo "⚠️ pode precisar de: sudo apt install portaudio19-dev (Debian)"
 fi
 
-read -p "🔊instalar suporte a reprodução de áudio e gravação de áudio? [s/N 
-]: " audio
-
+read -p "🔊instalar suporte a reprodução de áudio e gravação de áudio? [s/N]: " audio
 if [[ $audio =~ ^[Ss]$ ]]; then
     pip3 install --user pyaudio
 fi
@@ -84,7 +81,8 @@ fi
 
 read -p "▶️ deseja configurar o sistema para executar o pyOS automaticamente? [s/N]" autoexec
 if [[ $autoexec =~ ^[Ss]$ ]]; then
-    echo "cd $HOME/pyOS\npython3 pyOS.py" >> ./bashrc
+    echo "cd $HOME/pyOS\npython3 pyOS.py" >> ~/.bashrc
+    echo "✅ Configuração adicionada ao ~/.bashrc"
 fi
 
 echo ""

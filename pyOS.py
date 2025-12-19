@@ -29,7 +29,7 @@ import tempfile
 import curses
 from pathlib import Path
 import colorama
-versionparts = [5, 31]
+versionparts = [5, 32]
 version = f"v{versionparts[0]}.{versionparts[1]}"
 dir_original = os.getcwd()
 
@@ -1023,6 +1023,7 @@ def notepad():
 			
 
 
+
 def config():
 	global colorconfig				
 	print("cores texto:\n1. azul\n2. vermelho\n3. amerelo\n4. magenta\n5. verde\n6. normal\n0. outras configuracoes")
@@ -1040,7 +1041,7 @@ def config():
 	elif coresc == "6":
 		colorconfig = Fore.WHITE
 	elif coresc == "0":
-		print("opcoes:\n1. atualizar o pip\n2. informacoes")
+		print("opcoes:\n1. atualizar o pip\n2. informacoes\n3. desinstalar")
 		opcao = input("acao:")
 		if opcao == "1":
 			pyOS_system.upgpip()
@@ -1048,7 +1049,13 @@ def config():
 			print("info:")
 			print("nome: pyOS")
 			print(f"versão: {version}")
+			print(f"desenvolvedor: miguel cabral")
+			print("objetivo: ajudar pessoas com sistema linux sem interface grafica")
 			time.sleep(2)
+		elif opcao == "3":
+			os.system("clear")
+			criar_barra("desinstalar")
+			uninstall()
 	else:
 		print("invalido!")
 		
@@ -3704,6 +3711,493 @@ def processos_sistema():
             print(f"❌ Erro: {e}")
             time.sleep(2)
 
+def uninstall():
+    """
+    App para desinstalar o pyOS e seus componentes
+    """
+    import shutil
+    import json
+    import sys
+    
+    # Cores para o terminal
+    RED = '\033[91m'
+    GREEN = '\033[92m'
+    YELLOW = '\033[93m'
+    BLUE = '\033[94m'
+    MAGENTA = '\033[95m'
+    CYAN = '\033[96m'
+    BOLD = '\033[1m'
+    RESET = '\033[0m'
+    
+    def mostrar_titulo():
+        """Mostra o título do desinstalador"""
+        print(f"\n{BOLD}{RED}╔══════════════════════════════════════════════════════════╗{RESET}")
+        print(f"{BOLD}{RED}║{RESET}{BOLD}                 DESINSTALADOR pyOS                    {RESET}{RED}║{RESET}")
+        print(f"{BOLD}{RED}║{RESET}{BOLD}              Versão {version}                         {RESET}{RED}║{RESET}")
+        print(f"{BOLD}{RED}╚══════════════════════════════════════════════════════════╝{RESET}\n")
+    
+    def criar_backup_config():
+        """Cria um backup das configurações do usuário"""
+        backup_dir = "./pyOS_backup"
+        os.makedirs(backup_dir, exist_ok=True)
+        
+        arquivos_backup = []
+        
+        # Configurações a serem salvas
+        config_files = [
+            ("senha.txt", "Senha do sistema"),
+            ("passwordexist.txt", "Configuração de senha"),
+            ("./notes/", "Notas do usuário"),
+            ("./events/", "Eventos da agenda"),
+            ("./audio_files/", "Arquivos de áudio"),
+            ("./imgs/", "Imagens do usuário"),
+            ("msgs.json", "Mensagens"),
+            ("name_user.txt", "Usuários do chat"),
+            ("./apps/", "Apps instalados (exceto libs)"),
+        ]
+        
+        print(f"\n{BLUE}📦 Criando backup de configurações...{RESET}")
+        
+        for origem, descricao in config_files:
+            if isinstance(origem, str):
+                if os.path.exists(origem):
+                    try:
+                        if os.path.isdir(origem):
+                            # Copiar diretório
+                            destino = os.path.join(backup_dir, os.path.basename(origem.rstrip('/')))
+                            if os.path.exists(destino):
+                                shutil.rmtree(destino)
+                            shutil.copytree(origem, destino)
+                            print(f"  {GREEN}✓{RESET} {descricao}")
+                            arquivos_backup.append(origem)
+                        else:
+                            # Copiar arquivo
+                            destino = os.path.join(backup_dir, os.path.basename(origem))
+                            shutil.copy2(origem, destino)
+                            print(f"  {GREEN}✓{RESET} {descricao}")
+                            arquivos_backup.append(origem)
+                    except Exception as e:
+                        print(f"  {RED}✗{RESET} {descricao}: {e}")
+        
+        # Salvar lista de backup
+        with open(os.path.join(backup_dir, "backup_info.json"), "w") as f:
+            json.dump({
+                "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                "version": version,
+                "arquivos": arquivos_backup
+            }, f, indent=2)
+        
+        print(f"\n{GREEN}✅ Backup criado em: {backup_dir}{RESET}")
+        return backup_dir
+    
+    def listar_dependencias():
+        """Lista dependências Python instaladas"""
+        try:
+            print(f"\n{CYAN}📋 Listando dependências instaladas...{RESET}")
+            
+            # Verificar requirements.txt se existir
+            requirements_file = "./requirements.txt"
+            if os.path.exists(requirements_file):
+                with open(requirements_file, "r") as f:
+                    dependencias = [line.strip() for line in f if line.strip()]
+                print(f"\nDependências do requirements.txt:")
+                for dep in dependencias:
+                    print(f"  • {dep}")
+            
+            # Verificar módulos em apps/libs
+            libs_dir = "./apps/libs"
+            if os.path.exists(libs_dir):
+                print(f"\nMódulos em apps/libs:")
+                for item in os.listdir(libs_dir):
+                    if item.endswith(".py") or os.path.isdir(os.path.join(libs_dir, item)):
+                        print(f"  • {item}")
+            
+            # Verificar módulos do sistema
+            system_modules = ["colorama", "requests", "pyfiglet", "psutil", "pyaudio", "PIL", "speech_recognition"]
+            print(f"\nMódulos do sistema conhecidos:")
+            for mod in system_modules:
+                try:
+                    __import__(mod)
+                    print(f"  • {mod} {GREEN}(instalado){RESET}")
+                except ImportError:
+                    print(f"  • {mod} {RED}(não instalado){RESET}")
+                    
+        except Exception as e:
+            print(f"{RED}❌ Erro ao listar dependências: {e}{RESET}")
+    
+    def desinstalar_completo():
+        """Desinstalação completa"""
+        print(f"\n{RED}⚠️  ⚠️  ⚠️  ATENÇÃO: DESINSTALAÇÃO COMPLETA ⚠️  ⚠️  ⚠️{RESET}")
+        print(f"{YELLOW}Esta operação irá:{RESET}")
+        print(f"  1. {RED}Remover toda a estrutura do pyOS{RESET}")
+        print(f"  2. {RED}Desinstalar dependências Python{RESET}")
+        print(f"  3. {RED}Remover arquivos de configuração{RESET}")
+        print(f"  4. {RED}Excluir todos os dados do usuário{RESET}")
+        
+        confirmar1 = input(f"\n{BOLD}Tem certeza ABSOLUTA? (digite 'CONFIRMAR'): {RESET}").strip()
+        if confirmar1 != "CONFIRMAR":
+            print(f"{GREEN}❌ Operação cancelada.{RESET}")
+            return
+        
+        confirmar2 = input(f"\n{YELLOW}Esta ação é IRREVERSÍVEL! Digite 'SIM' para continuar: {RESET}").strip()
+        if confirmar2 != "SIM":
+            print(f"{GREEN}❌ Operação cancelada.{RESET}")
+            return
+        
+        # Criar backup primeiro
+        backup_dir = criar_backup_config()
+        
+        print(f"\n{RED}🗑️  Iniciando desinstalação completa...{RESET}")
+        
+        # 1. Remover estrutura pyOS
+        print(f"\n{BOLD}1. Removendo estrutura do pyOS...{RESET}")
+        dirs_to_remove = [
+            "./pyOS",
+            "./apps",
+            "./notes",
+            "./events",
+            "./audio_files",
+            "./imgs",
+        ]
+        
+        for dir_path in dirs_to_remove:
+            if os.path.exists(dir_path):
+                try:
+                    if os.path.isdir(dir_path):
+                        shutil.rmtree(dir_path)
+                        print(f"  {GREEN}✓{RESET} Removido: {dir_path}")
+                    else:
+                        os.remove(dir_path)
+                        print(f"  {GREEN}✓{RESET} Removido: {dir_path}")
+                except Exception as e:
+                    print(f"  {RED}✗{RESET} Erro ao remover {dir_path}: {e}")
+        
+        # 2. Remover arquivos de configuração
+        print(f"\n{BOLD}2. Removendo arquivos de configuração...{RESET}")
+        files_to_remove = [
+            "pyOS.py",
+            "syscreated.txt",
+            "senha.txt",
+            "passwordexist.txt",
+            "msgs.json",
+            "name_user.txt",
+            "requirements.txt",
+            "pyOS_backup.zip",
+        ]
+        
+        for file_path in files_to_remove:
+            if os.path.exists(file_path):
+                try:
+                    os.remove(file_path)
+                    print(f"  {GREEN}✓{RESET} Removido: {file_path}")
+                except Exception as e:
+                    print(f"  {RED}✗{RESET} Erro ao remover {file_path}: {e}")
+        
+        # 3. Desinstalar dependências
+        print(f"\n{BOLD}3. Desinstalando dependências...{RESET}")
+        dependencias = [
+            "colorama",
+            "requests",
+            "pyfiglet",
+            "bs4",
+            "psutil",
+            "pyaudio",
+            "Pillow",
+            "speechrecognition",
+        ]
+        
+        for dep in dependencias:
+            try:
+                os.system(f"{sys.executable} -m pip uninstall {dep} -y")
+                print(f"  {GREEN}✓{RESET} Desinstalado: {dep}")
+            except Exception as e:
+                print(f"  {YELLOW}⚠{RESET} Não foi possível desinstalar {dep}: {e}")
+        
+        # 4. Limpar cache pip
+        print(f"\n{BOLD}4. Limpando cache pip...{RESET}")
+        try:
+            os.system(f"{sys.executable} -m pip cache purge")
+            print(f"  {GREEN}✓{RESET} Cache limpo")
+        except:
+            print(f"  {YELLOW}⚠{RESET} Não foi possível limpar cache")
+        
+        print(f"\n{GREEN}✅ Desinstalação completa concluída!{RESET}")
+        print(f"\n{YELLOW}📦 Backup salvo em: {backup_dir}{RESET}")
+        print(f"\n{BOLD}O pyOS foi completamente removido do sistema.{RESET}")
+        print(f"{BOLD}Para reinstalar, execute novamente o pyOS.py{RESET}")
+        
+        input(f"\nPressione Enter para sair...")
+        sys.exit(0)
+    
+    def desinstalar_parcial():
+        """Desinstalação parcial - mantém configurações"""
+        print(f"\n{YELLOW}⚠️  DESINSTALAÇÃO PARCIAL{RESET}")
+        print(f"{YELLOW}Esta operação irá:{RESET}")
+        print(f"  1. {YELLOW}Remover estrutura do pyOS{RESET}")
+        print(f"  2. {GREEN}Manter configurações do usuário{RESET}")
+        print(f"  3. {GREEN}Manter dependências instaladas{RESET}")
+        print(f"  4. {YELLOW}Remover arquivo principal pyOS.py{RESET}")
+        
+        confirmar = input(f"\n{BOLD}Continuar? (s/n): {RESET}").strip().lower()
+        if confirmar != 's':
+            print(f"{GREEN}❌ Operação cancelada.{RESET}")
+            return
+        
+        print(f"\n{YELLOW}🗑️  Iniciando desinstalação parcial...{RESET}")
+        
+        # 1. Remover estrutura pyOS
+        print(f"\n{BOLD}1. Removendo estrutura do pyOS...{RESET}")
+        dirs_to_remove = [
+            "./pyOS",
+        ]
+        
+        for dir_path in dirs_to_remove:
+            if os.path.exists(dir_path):
+                try:
+                    shutil.rmtree(dir_path)
+                    print(f"  {GREEN}✓{RESET} Removido: {dir_path}")
+                except Exception as e:
+                    print(f"  {RED}✗{RESET} Erro ao remover {dir_path}: {e}")
+        
+        # 2. Remover arquivo principal
+        print(f"\n{BOLD}2. Removendo arquivo principal...{RESET}")
+        files_to_remove = [
+            "pyOS.py",
+            "syscreated.txt",
+        ]
+        
+        for file_path in files_to_remove:
+            if os.path.exists(file_path):
+                try:
+                    os.remove(file_path)
+                    print(f"  {GREEN}✓{RESET} Removido: {file_path}")
+                except Exception as e:
+                    print(f"  {RED}✗{RESET} Erro ao remover {file_path}: {e}")
+        
+        print(f"\n{GREEN}✅ Desinstalação parcial concluída!{RESET}")
+        print(f"\n{BOLD}O pyOS foi removido, mas:{RESET}")
+        print(f"  • Configurações do usuário foram mantidas")
+        print(f"  • Dependências continuam instaladas")
+        print(f"  • Arquivos de apps em ./apps/ foram mantidos")
+        
+        input(f"\nPressione Enter para continuar...")
+    
+    def desinstalar_simples():
+        """Desinstalação simples - apenas o arquivo pyOS.py"""
+        print(f"\n{BLUE}🗑️  DESINSTALAÇÃO SIMPLES{RESET}")
+        print(f"{BLUE}Esta operação irá:{RESET}")
+        print(f"  1. {BLUE}Remover apenas o arquivo pyOS.py{RESET}")
+        print(f"  2. {GREEN}Manter tudo o mais{RESET}")
+        
+        confirmar = input(f"\n{BOLD}Remover pyOS.py? (s/n): {RESET}").strip().lower()
+        if confirmar != 's':
+            print(f"{GREEN}❌ Operação cancelada.{RESET}")
+            return
+        
+        if os.path.exists("pyOS.py"):
+            try:
+                os.remove("pyOS.py")
+                print(f"\n{GREEN}✅ pyOS.py removido com sucesso!{RESET}")
+                print(f"\n{BOLD}Para reinstalar, basta copiar o pyOS.py novamente{RESET}")
+            except Exception as e:
+                print(f"{RED}❌ Erro ao remover pyOS.py: {e}{RESET}")
+        else:
+            print(f"{YELLOW}⚠️  Arquivo pyOS.py não encontrado{RESET}")
+        
+        input(f"\nPressione Enter para continuar...")
+    
+    def desinstalar_customizada():
+        """Desinstalação customizada"""
+        print(f"\n{MAGENTA}⚙️  DESINSTALAÇÃO PERSONALIZADA{RESET}")
+        print(f"{MAGENTA}Selecione o que deseja remover:{RESET}")
+        
+        opcoes = {
+            '1': {'nome': 'Estrutura pyOS/', 'ativo': True},
+            '2': {'nome': 'Diretório apps/', 'ativo': True},
+            '3': {'nome': 'Configurações de senha', 'ativo': True},
+            '4': {'nome': 'Notas do usuário', 'ativo': True},
+            '5': {'nome': 'Eventos da agenda', 'ativo': True},
+            '6': {'nome': 'Arquivos de áudio', 'ativo': True},
+            '7': {'nome': 'Imagens do usuário', 'ativo': True},
+            '8': {'nome': 'Mensagens e chats', 'ativo': True},
+            '9': {'nome': 'Dependências Python', 'ativo': False},
+            '10': {'nome': 'Arquivo pyOS.py', 'ativo': True},
+        }
+        
+        while True:
+            print(f"\n{BOLD}Opções de remoção:{RESET}")
+            for key, value in opcoes.items():
+                status = f"{GREEN}[✓]{RESET}" if value['ativo'] else f"{RED}[✗]{RESET}"
+                print(f"  {key}. {status} {value['nome']}")
+            
+            print(f"\n{CYAN}Comandos:{RESET}")
+            print(f"  [número] - Alternar opção")
+            print(f"  listar - Ver detalhes do que será removido")
+            print(f"  executar - Iniciar desinstalação")
+            print(f"  sair - Cancelar")
+            
+            comando = input(f"\n{BOLD}Opção: {RESET}").strip().lower()
+            
+            if comando == 'sair':
+                print(f"{GREEN}❌ Operação cancelada.{RESET}")
+                return
+            elif comando == 'listar':
+                listar_itens_selecionados(opcoes)
+            elif comando == 'executar':
+                executar_desinstalacao_customizada(opcoes)
+                break
+            elif comando in opcoes:
+                opcoes[comando]['ativo'] = not opcoes[comando]['ativo']
+                print(f"{YELLOW}Opção {opcoes[comando]['nome']} alternada{RESET}")
+            else:
+                print(f"{RED}❌ Comando inválido{RESET}")
+    
+    def listar_itens_selecionados(opcoes):
+        """Lista itens que serão removidos na desinstalação customizada"""
+        print(f"\n{MAGENTA}📋 ITENS SELECIONADOS PARA REMOÇÃO:{RESET}")
+        
+        itens_ativos = [op for op in opcoes.values() if op['ativo']]
+        
+        if not itens_ativos:
+            print(f"  {YELLOW}Nenhum item selecionado{RESET}")
+            return
+        
+        for i, item in enumerate(itens_ativos, 1):
+            print(f"  {i}. {item['nome']}")
+        
+        print(f"\n{BOLD}Total: {len(itens_ativos)} itens serão removidos{RESET}")
+        
+        # Estimar tamanho
+        tamanho_total = 0
+        dirs_to_check = [
+            ("./pyOS", "Estrutura pyOS/"),
+            ("./apps", "Diretório apps/"),
+            ("./notes", "Notas do usuário"),
+            ("./events", "Eventos da agenda"),
+            ("./audio_files", "Arquivos de áudio"),
+            ("./imgs", "Imagens do usuário"),
+        ]
+        
+        for dir_path, nome in dirs_to_check:
+            if os.path.exists(dir_path) and any(op['nome'] == nome for op in itens_ativos):
+                try:
+                    for root, dirs, files in os.walk(dir_path):
+                        for file in files:
+                            file_path = os.path.join(root, file)
+                            if os.path.exists(file_path):
+                                tamanho_total += os.path.getsize(file_path)
+                except:
+                    pass
+        
+        if tamanho_total > 0:
+            tamanho_mb = tamanho_total / (1024 * 1024)
+            print(f"{BOLD}Espaço liberado: {tamanho_mb:.2f} MB{RESET}")
+    
+    def executar_desinstalacao_customizada(opcoes):
+        """Executa a desinstalação customizada baseada nas opções selecionadas"""
+        print(f"\n{MAGENTA}⚙️  Executando desinstalação personalizada...{RESET}")
+        
+        # Pedir confirmação final
+        confirmar = input(f"{BOLD}Tem certeza? (s/n): {RESET}").strip().lower()
+        if confirmar != 's':
+            print(f"{GREEN}❌ Operação cancelada.{RESET}")
+            return
+        
+        # Mapear opções para ações
+        acoes = {
+            'Estrutura pyOS/': lambda: remover_diretorio("./pyOS"),
+            'Diretório apps/': lambda: remover_diretorio("./apps"),
+            'Configurações de senha': lambda: remover_arquivos(["senha.txt", "passwordexist.txt"]),
+            'Notas do usuário': lambda: remover_diretorio("./notes"),
+            'Eventos da agenda': lambda: remover_diretorio("./events"),
+            'Arquivos de áudio': lambda: remover_diretorio("./audio_files"),
+            'Imagens do usuário': lambda: remover_diretorio("./imgs"),
+            'Mensagens e chats': lambda: remover_arquivos(["msgs.json", "name_user.txt"]),
+            'Dependências Python': lambda: desinstalar_dependencias(),
+            'Arquivo pyOS.py': lambda: remover_arquivos(["pyOS.py", "syscreated.txt"]),
+        }
+        
+        # Executar ações
+        for op in opcoes.values():
+            if op['ativo']:
+                print(f"\n{BOLD}Removendo: {op['nome']}{RESET}")
+                try:
+                    acoes[op['nome']]()
+                    print(f"  {GREEN}✓ Concluído{RESET}")
+                except Exception as e:
+                    print(f"  {RED}✗ Erro: {e}{RESET}")
+        
+        print(f"\n{GREEN}✅ Desinstalação personalizada concluída!{RESET}")
+        input(f"\nPressione Enter para continuar...")
+    
+    def remover_diretorio(caminho):
+        """Remove um diretório e seu conteúdo"""
+        if os.path.exists(caminho):
+            shutil.rmtree(caminho)
+    
+    def remover_arquivos(lista_arquivos):
+        """Remove uma lista de arquivos"""
+        for arquivo in lista_arquivos:
+            if os.path.exists(arquivo):
+                os.remove(arquivo)
+    
+    def desinstalar_dependencias():
+        """Desinstala dependências Python"""
+        dependencias = [
+            "colorama", "requests", "pyfiglet", "bs4",
+            "psutil", "pyaudio", "Pillow", "speechrecognition"
+        ]
+        
+        for dep in dependencias:
+            try:
+                os.system(f"{sys.executable} -m pip uninstall {dep} -y")
+            except:
+                pass
+    
+    # Menu principal do desinstalador
+    while True:
+        mostrar_titulo()
+        
+        print(f"{BOLD}Opções de desinstalação:{RESET}")
+        print(f"  {RED}1.{RESET} {BOLD}Desinstalação completa{RESET} - Remove TUDO")
+        print(f"  {YELLOW}2.{RESET} {BOLD}Desinstalação parcial{RESET} - Remove pyOS, mantém configurações")
+        print(f"  {BLUE}3.{RESET} {BOLD}Desinstalação simples{RESET} - Remove apenas pyOS.py")
+        print(f"  {MAGENTA}4.{RESET} {BOLD}Desinstalação customizada{RESET} - Escolha o que remover")
+        print(f"  {GREEN}5.{RESET} {BOLD}Listar dependências{RESET} - Ver o que está instalado")
+        print(f"  {CYAN}6.{RESET} {BOLD}Criar backup{RESET} - Backup das configurações")
+        print(f"  {BOLD}0.{RESET} {BOLD}Sair{RESET} - Voltar ao menu principal")
+        
+        try:
+            opcao = input(f"\n{BOLD}Escolha uma opção (0-6): {RESET}").strip()
+            
+            if opcao == "0":
+                print(f"{GREEN}👋 Voltando ao menu principal...{RESET}")
+                break
+            elif opcao == "1":
+                desinstalar_completo()
+            elif opcao == "2":
+                desinstalar_parcial()
+            elif opcao == "3":
+                desinstalar_simples()
+            elif opcao == "4":
+                desinstalar_customizada()
+            elif opcao == "5":
+                listar_dependencias()
+                input(f"\nPressione Enter para continuar...")
+            elif opcao == "6":
+                backup_dir = criar_backup_config()
+                input(f"\nPressione Enter para continuar...")
+            else:
+                print(f"{RED}❌ Opção inválida!{RESET}")
+                time.sleep(1)
+                
+        except KeyboardInterrupt:
+            print(f"\n\n{YELLOW}⚠️  Operação interrompida pelo usuário{RESET}")
+            break
+        except Exception as e:
+            print(f"{RED}❌ Erro: {e}{RESET}")
+            time.sleep(2)
+
 apps = {
     "calculadora": calculadora,
     "notepad": notepad,
@@ -3745,16 +4239,11 @@ while executando:
 	print(colorconfig + "apps:")
 	nomes = sorted(apps.keys())
 	for i in range(0, len(nomes), 4):
-		print(nomes[i], end='  ')
-		if i + 1 < len(nomes):
-			print(nomes[i + 1], end='  ')
-		if i + 2 < len(nomes):
-			print(nomes[i + 2], end="  ")
-		elif i + 3 < len(nomes):
-			print(nomes[i + 3])
-		else:
-			print()
-	print()
+		# Imprime até 4 apps por linha
+		for j in range(4):
+			if i + j < len(nomes):
+				print(nomes[i + j], end='  ')
+		print()  # Nova linha após cada grupo de 
 	app = input("app: ")
 	os.system("clear")
 	if app == "func":

@@ -7,33 +7,33 @@ echo "========================================================"
 if command -v apt &> /dev/null; then
     echo "📦 Distro: Debian/Ubuntu/Mint"
     sudo apt update
-    sudo apt install -y git python3 python3-pip
+    sudo apt install -y git python3 python3-pip portaudio19-dev
     
 elif command -v pacman &> /dev/null; then
     echo "📦 Distro: Arch/Manjaro"
-    sudo pacman -Syu --noconfirm git python python-pip
+    sudo pacman -Syu --noconfirm git python python-pip portaudio19-dev 
     
 elif command -v dnf &> /dev/null; then
     echo "📦 Distro: Fedora/RHEL/CentOS"
-    sudo dnf install -y git python3 python3-pip
+    sudo dnf install -y git python3 python3-pip portaudio19-dev
     
 elif command -v zypper &> /dev/null; then
     echo "📦 Distro: openSUSE"
-    sudo zypper install -y git python3 python3-pip
+    sudo zypper install -y git python3 python3-pip portaudio19-dev
     
 elif command -v apk &> /dev/null; then
     echo "📦 Distro: Alpine"
     sudo apk update
-    sudo apk add git python3 py3-pip
+    sudo apk add git python3 py3-pip portaudio19-dev
     
 elif command -v emerge &> /dev/null; then
     echo "📦 Distro: Gentoo"
     echo "⚠️  No Gentoo, você já sabe o que está fazendo!"
-    sudo emerge --ask dev-vcs/git dev-lang/python dev-python/pip
+    sudo emerge --ask dev-vcs/git dev-lang/python dev-python/pip media-libs/portaudio
     
 else
     echo "❌ Gerenciador de pacotes não reconhecido!"
-    echo "Instale manualmente: git, python3, pip"
+    echo "Instale manualmente: git, python3, pip e portaudio19-dev(opcional)"
     exit 1
 fi
 

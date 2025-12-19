@@ -1053,11 +1053,16 @@ def config():
 		print("invalido!")
 		
 def terminal():
+    import getpass
     global apps
+    try:
+    	user = getpass.getuser()
+    except Exception:
+    	user = "unknown"
     executing = True
     while executing:
         diret = os.getcwd()
-        coman = input(Fore.CYAN + f"{__import__('socket').gethostname()}@{os.getlogin()} {diret}>" + Fore.RESET)
+        coman = input(Fore.CYAN + f"{__import__('socket').gethostname()}@{user} {diret}>" + Fore.RESET)
         
         if coman == "quit":
             os.chdir(dir_original)

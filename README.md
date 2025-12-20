@@ -56,13 +56,14 @@ python3 pyOS.py
 | difícil de usar | fácil de usar
 ### 📺 interface do pyOS copiada e colada:
 ```text
-python-executive                 _ ⛶ X
+python-executive                  _ ⛶ X
 =python==hora==fechar==hostsys=
 
 apps:
-calculadora  notepad  config
-terminal  gerenciador de arquivos  appsInstalados
-navegador  gerenciador de tarefas
+agenda  appsInstalados  audio  calculadora
+config  controle de internet  diagnostico de rede  fotos
+gerenciador de arquivos  gerenciador de tarefas  mensagens  navegador
+notepad  processos-sistema  python  terminal
 app:
 ```
 ## 🖼 fotos:
@@ -139,3 +140,22 @@ O pyOS inclui um terminal **com propósito específico**:
 
 ## aviso importante 
 pyOS não é um sistema operacional simulado e não tem essa intenção, ele é um tui que facilita o uso do Linux sem gui, pyOS é um nome dado porque ele tenta parecer um sistema operacional para ser mais amigável 
+
+
+# Aplicativos(são 16 apps)
+- calculadora
+- notepad
+- config
+- terminal
+- agenda
+- fotos
+- mensagens
+- processo-sistema
+- gerenciador de tarefas
+- appsInstalados
+- audio
+- controle de internet
+- diagnóstico de rede
+- python
+- navegador(converte sites para tui antes,  pode nao funcionar com todos os sites)
+- gerenciador de arquivos

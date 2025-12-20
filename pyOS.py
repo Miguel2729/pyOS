@@ -926,7 +926,7 @@ def calculadora():
 		print(res)
 	else:
 		print("operador invalído!")
-	time.sleep(2)
+	input("Pressione enter para sair...")
 	# impossivel injetar codigo, quem falar que pode não olhou o codigo direito
 	
 def notepad():

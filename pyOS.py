@@ -914,7 +914,7 @@ def calculadora():
 		return
 	op = input("operador matematico: ")
 	# sem divisão por zero
-	if  n2 == 0 and op == "/":
+	if  n2 == 0 and op in ["/", "//", "%"]:
 		print("erro de divisão por zero")
 		time.sleep(5)
 		return

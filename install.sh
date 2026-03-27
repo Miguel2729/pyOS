@@ -50,12 +50,12 @@ fi
 
 # Instalar dependências Python
 echo "🐍 Instalando dependências Python..."
-pip3 install --user colorama requests pyfiglet
+pip3 install --user colorama requests
 
 # Opcionais (pergunta ao usuário)
 read -p "📸 Instalar suporte a imagens (Pillow)? [s/N]: " img
 if [[ $img =~ ^[Ss]$ ]]; then
-    pip3 install --user pillow
+    pip3 install --user pillow==12.1.0
 fi
 
 read -p "🎤 Instalar reconhecimento de voz? [s/N]: " voz
@@ -81,7 +81,7 @@ fi
 
 read -p "▶️ deseja configurar o sistema para executar o pyOS automaticamente? [s/N]" autoexec
 if [[ $autoexec =~ ^[Ss]$ ]]; then
-    echo "cd $HOME/pyOS\npython3 pyOS.py" >> ~/.bashrc
+    echo -e "cd $HOME/pyOS\npython3 pyOS.py" >> ~/.bashrc
     echo "✅ Configuração adicionada ao ~/.bashrc"
 fi
 

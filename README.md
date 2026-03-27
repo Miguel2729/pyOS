@@ -1,8 +1,7 @@
 # 💻 pyOS
 o sistema está sobe licença MIT
 ## 🔍 objetivo:
-- 1. ser um sistema que roda dentro de outro
-- 2. deixar sistemas operacionais com só terminal mais amigável
+- 1. deixar sistemas operacionais com só terminal mais amigável
 
 **o python mínimo compatível é 3.6, use python 3.6 ou superior**
 

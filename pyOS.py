@@ -1,3 +1,15 @@
+"""
+pyOS
+
+objetivo:
+	no linux sistemas como alpine, arch, não tem tem gui, invez de criar uma gui real pesado para caralho, criamos um tui amigagel zero linha de comando, é como ter um interface manager so que pro linux e mais leve
+
+notas:
+	1. os botoes de acao falso da janela não é simulacao, sao decorações para tornar o tui mais famíliar
+	2. ele se chama pyOS porque tenta imitar um os simples para ser amigavel, não que ele é sistema simulado
+	3. so use o pyOS se o seu computador é linux sem interface grafica e voce não sabe os comandos, é como um terminal com rodinhas
+"""
+
 import os
 try:
 	from colorama import Fore, init, Style
@@ -22,14 +34,14 @@ from datetime import datetime
 import importlib
 import subprocess
 import time
-import threading
 import shutil
 import traceback
 import tempfile
 import curses
 from pathlib import Path
 import colorama
-versionparts = [5, 32]
+versionparts = [6, 0]
+rodando2 = {}
 version = f"v{versionparts[0]}.{versionparts[1]}"
 dir_original = os.getcwd()
 
@@ -51,22 +63,13 @@ def exception_handler(exc_type, exc_value, exc_traceback):
     # depois chama a função criar_barra
     criar_barra("system error")
     
-    # Deleta pastas dentro de ./pyOS/proc
-    proc_path = "./pyOS/proc"
-    if os.path.exists(proc_path):
-        for item in os.listdir(proc_path):
-            item_path = os.path.join(proc_path, item)
-            if os.path.isdir(item_path):
-                try: 
-                    shutil.rmtree(item_path)
-                except: 
-                    pass
+  
     
     # Printa o erro
     print("⚠️ " + str(exc_value))
     
     # Menu de opções
-    print("[1] reiniciar o sistema | [2] desligar o sistema")
+    print("[1] reiniciar o sistema | [2] desligar o sistema | [0] ignorar")
     
     while True:
         try:
@@ -74,6 +77,8 @@ def exception_handler(exc_type, exc_value, exc_traceback):
             if opcao == "1":
                 python = sys.executable
                 os.execl(python, python, *sys.argv)
+            elif opcao == "0":
+            	return
             elif opcao == "2":
                 print("Desligando o sistema...")
                 quit()
@@ -113,10 +118,8 @@ pyOSdir = os.getcwd()
 colorconfig = Fore.WHITE
 processos_ativos = {}
 os.chdir("./")
-os.makedirs("apps/libs", exist_ok=True)
-print(Fore.YELLOW + "trabalhando em atualizaçoes...")
-os.system("pip install --upgrade pip")
-time.sleep(8)
+os.makedirs("./apps", exist_ok=True)
+os.makedirs("./workspace", exist_ok=True)
 os.system("clear")
 if os.path.exists("./syscreated.txt") and not os.path.exists("./pyOS"):
     print("⛔️ a pasta ./pyOS esta ausente, o pyOS não funcionara corretamente")
@@ -137,590 +140,12 @@ def instalar_modulos():
 	
 	with open("pyOS_system.py", 'w') as mod2:
 		mod2.write("import os\n\nwinbtn = '_ ⛶ X'\ndef upgpip():\n\tos.system('pip install --upgrade pip')")
-	
-	with open("pyOS_calc.py", 'w') as mod3:
-		mod3.write("def calc(n1, op, n2):\n\tres = eval(f\"{n1} {op} {n2}\")\n\treturn res")
-	
-	# Módulo pyOS_proc para o sistema (processos em background)
-	with open("pyOS_proc.py", 'w') as mod4:
-		mod4.write("""import os
-import subprocess
-import sys
-import threading
-import time
-
-processos_ativos = {}
-
-def verprocbac():
-	\"\"\"Verifica e mantém processos rodando em background sem mensagens\"\"\"
-	processos_com_erro = set()
-
-	while True:
-		try:
-			# Verificar se diretório de processos existe
-			proc_dir = "./pyOS/proc"
-			if not os.path.exists(proc_dir):
-				time.sleep(5)
-				continue
-				
-			# Listar todos os processos no diretório
-			processos_no_diretorio = [d for d in os.listdir(proc_dir) 
-									if os.path.isdir(os.path.join(proc_dir, d))]
-			
-			# Remover processos que não estão mais no diretório
-			for pid in list(processos_ativos.keys()):
-				if pid not in processos_no_diretorio:
-					try:
-						processos_ativos[pid].terminate()
-					except:
-						pass
-					del processos_ativos[pid]
-					if pid in processos_com_erro:
-						processos_com_erro.remove(pid)
-			
-			# Verificar e iniciar processos
-			for pid in processos_no_diretorio:
-				if pid in processos_com_erro:
-					continue
-					
-				pid_path = os.path.join(proc_dir, pid)
-				script_path = os.path.join(pid_path, 'script.py')
-				
-				# Verificar se o processo já está ativo
-				if pid in processos_ativos:
-					if processos_ativos[pid].poll() is not None:
-						returncode = processos_ativos[pid].returncode
-						if returncode != 0:
-							processos_com_erro.add(pid)
-							error_file = os.path.join(pid_path, 'error.log')
-							with open(error_file, 'w') as f:
-								f.write(f"Processo terminou com código de erro: {returncode}\\n")
-						del processos_ativos[pid]
-					continue
-				
-				# Iniciar novo processo
-				if os.path.exists(script_path):
-					try:
-						processo = subprocess.Popen(
-							[sys.executable, script_path],
-							stdout=subprocess.PIPE,
-							stderr=subprocess.PIPE,
-							text=True,
-							cwd=pid_path
-						)
-						processos_ativos[pid] = processo
-					except Exception as e:
-						processos_com_erro.add(pid)
-						error_file = os.path.join(pid_path, 'error.log')
-						with open(error_file, 'w') as f:
-							f.write(f"Erro ao iniciar processo: {e}\\n")
-			
-			# Limpar processos finalizados
-			for pid in list(processos_ativos.keys()):
-				if processos_ativos[pid].poll() is not None:
-					returncode = processos_ativos[pid].returncode
-					if returncode != 0:
-						processos_com_erro.add(pid)
-						pid_path = os.path.join(proc_dir, pid)
-						error_file = os.path.join(pid_path, 'error.log')
-						with open(error_file, 'w') as f:
-							f.write(f"Processo terminou com código de erro: {returncode}\\n")
-					del processos_ativos[pid]
-					
-		except Exception:
-			# Ignorar todos os erros silenciosamente
-			pass
-		
-		time.sleep(3)
-
-def init():
-	\"\"\"Inicia o sistema de processos em background\"\"\"
-	thread_processos = threading.Thread(target=verprocbac, daemon=True)
-	thread_processos.start()
-	return thread_processos
-
-def stopall():
-	\"\"\"Encerra todos os processos ativos\"\"\"
-	for pid, processo in processos_ativos.items():
-		try:
-			processo.terminate()
-		except:
-			pass
-	processos_ativos.clear()
-""")
-	
 	os.chdir(diratual)
-	os.makedirs("apps/libs", exist_ok=True)
-	os.chdir("./apps/libs")
 	
-	with open('pyOS_app.py', 'w') as mod1app:
-		mod1app.write(f"""import pyfiglet
-from colorama import Fore
-ver = {versionparts}
-def fonts(fonte, texto):
-	text = pyfiglet.figlet.format(texto, font=fonte)
-
-def colors(cor):
-	if cor == 'azul':
-		return Fore.BLUE
-	if cor == 'ciano':
-		return Fore.CYAN
-	if cor == 'roxo':
-		return Fore.MAGENTA
-	if cor == 'amarelo':
-		return Fore.YELLOW
-	if cor == 'vermelho':
-		return Fore.RED
-	if cor == 'normal':
-		return Fore.WHITE""")
 	
-	# pyOS_proc para apps (criação de processos)
-	with open("pyOS_appproc.py", 'w') as mod2app:
-		mod2app.write("""import os
-import random
-import subprocess
-import sys
-
-def criarproc(script, nome):
-	# Encontra o diretório base automaticamente
-	current_file = os.path.abspath(__file__)
-	base_dir = os.path.dirname(os.path.dirname(os.path.dirname(current_file)))
-	proc_dir = os.path.join(base_dir, "pyOS", "proc")
 	
-	# Garante que o diretório existe
-	os.makedirs(proc_dir, exist_ok=True)
-	
-	n1 = str(random.randint(0, 9))
-	n2 = str(random.randint(0, 9))
-	n3 = str(random.randint(0, 9))
-	n4 = str(random.randint(0, 9))
-	procpid = n1 + n2 + n3 + n4
-	
-	# Cria diretório do processo
-	proc_path = os.path.join(proc_dir, procpid)
-	os.makedirs(proc_path, exist_ok=True)
-	os.system(f"chmod -R 744 {proc_path}")
-	
-	# Escreve arquivos
-	with open(os.path.join(proc_path, 'nome.txt'), 'w') as nomeproc:
-		nomeproc.write(nome)
-	with open(os.path.join(proc_path, 'script.py'), 'w') as scriptpy:
-		scriptpy.write(script)
-	
-	# Inicia o processo em background
-	try:
-		processo = subprocess.Popen(
-			[sys.executable, os.path.join(proc_path, 'script.py')],
-			stdout=subprocess.PIPE,
-			stderr=subprocess.PIPE,
-			text=True
-		)
-		return procpid, processo
-	except Exception as e:
-		print(f"Erro ao iniciar processo: {e}")
-		return procpid, None
-""")
-	
-	with open("pyOS_vm.py", "w") as mod3app:
-		mod3app.write("""# pyOS_vm.py - EMULADOR REAL
-import threading
-import struct
 
-class VMEmulator:
-	def __init__(self, ram_size=1024):  # 1MB RAM
-		# MEMÓRIA FÍSICA (emulação real)
-		self.ram = bytearray(ram_size * 1024)  # 1MB em bytes
-		
-		# REGISTRADORES REAIS (x86-like)
-		self.registers = {
-			'EAX': 0, 'EBX': 0, 'ECX': 0, 'EDX': 0,
-			'ESI': 0, 'EDI': 0, 'EBP': 0, 'ESP': 0x1000,  # Stack pointer
-			'EIP': 0x100,  # Instruction pointer
-			'EFLAGS': 0
-		}
-		
-		# INSTRUÇÕES SUPORTADAS (opcodes reais)
-		self.instructions = {
-			0x88: self.mov_rm8_r8,    # MOV [mem], reg
-			0x89: self.mov_rm32_r32,  # MOV [mem], reg32
-			0xB8: self.mov_eax_imm32, # MOV EAX, immediate
-			0x01: self.add_rm32_r32,  # ADD [mem], reg
-			0x83: self.add_rm32_imm8, # ADD [mem], immediate8
-			0xEB: self.jmp_rel8,      # JMP short
-		}
-		
-		self.running = False
-		self.cpu_thread = threading.Thread(target=self.cpu_cycle)
-	
-	def start(self):
-		\"\"\"Inicia a emulação REAL\"\"\"
-		self.running = True
-		self.cpu_thread.start()
-		print(\"CPU Emulator iniciado!\")
-	
-	def stop(self):
-		self.running = False
-	
-	def cpu_cycle(self):
-		\"\"\"Ciclo de fetch-decode-execute REAL\"\"\"
-		while self.running:
-			# FETCH: Busca opcode da memória no EIP
-			eip = self.registers['EIP']
-			if eip >= len(self.ram):
-				break
-				
-			opcode = self.ram[eip]
-			
-			# DECODE: Identifica instrução
-			if opcode in self.instructions:
-				# EXECUTE: Executa instrução
-				self.instructions[opcode]()
-			else:
-				print(f\"Instrução não implementada: 0x{opcode:02X}\")
-				self.registers['EIP'] += 1
-	
-	# --- INSTRUÇÕES IMPLEMENTADAS ---
-	
-	def mov_rm8_r8(self):
-		\"\"\"MOV byte [mem], reg8 - Opcode 0x88\"\"\"
-		eip = self.registers['EIP']
-		modrm = self.ram[eip + 1]  # ModR/M byte
-		
-		# Decodifica endereço e registrador
-		reg = (modrm >> 3) & 0x07
-		rm = modrm & 0x07
-		
-		# Simples: MOV [EDI], AL
-		if rm == 7:  # EDI
-			address = self.registers['EDI']
-			if reg == 0:  # AL
-				self.ram[address] = self.registers['EAX'] & 0xFF
-		
-		self.registers['EIP'] += 2
-	
-	def mov_eax_imm32(self):
-		\"\"\"MOV EAX, immediate32 - Opcode 0xB8\"\"\"
-		eip = self.registers['EIP']
-		
-		# Lê 4 bytes do immediate
-		immediate = struct.unpack('<I', bytes(self.ram[eip+1:eip+5]))[0]
-		self.registers['EAX'] = immediate
-		
-		self.registers['EIP'] += 5
-	
-	def add_rm32_imm8(self):
-		\"\"\"ADD [mem], immediate8 - Opcode 0x83\"\"\"
-		eip = self.registers['EIP']
-		modrm = self.ram[eip + 1]
-		immediate = self.ram[eip + 2]
-		
-		# ADD [EAX], imm8
-		if (modrm & 0xC7) == 0x00:
-			address = self.registers['EAX']
-			current = struct.unpack('<I', bytes(self.ram[address:address+4]))[0]
-			result = (current + immediate) & 0xFFFFFFFF
-			self.ram[address:address+4] = struct.pack('<I', result)
-		
-		self.registers['EIP'] += 3
-	
-	def jmp_rel8(self):
-		\"\"\"JMP short - Opcode 0xEB\"\"\"
-		eip = self.registers['EIP']
-		offset = self.ram[eip + 1]
-		
-		# Calcula salto relativo
-		if offset > 127:
-			offset -= 256  # Complemento de 2
-		
-		self.registers['EIP'] += 2 + offset
-	
-	def load_binary(self, data, address=0x100):
-		\"\"\"Carrega código binário REAL na memória\"\"\"
-		for i, byte in enumerate(data):
-			if address + i < len(self.ram):
-				self.ram[address + i] = byte
-		
-		self.registers['EIP'] = address
-		print(f\"Programa carregado em 0x{address:04X}\")
-""")
-	
-	os.chdir(diratual)
-	print("Módulos instalados com sucesso!")
 
-def instalar_hostsys():
-    diroriginal = os.getcwd()
-    os.chdir("./pyOS/system/hostsys")
-    
-    # Scripts de reinício e desligamento
-    with open("restart.sh", 'w') as restart_sys:
-        restart_sys.write('#!/bin/bash\nclear\nreboot')
-    
-    with open("shutdown.sh", 'w') as quit_sys:
-        quit_sys.write("#!/bin/bash\nclear\npoweroff")
-    
-    # Script de rede corrigido
-    with open("network.sh", "w") as net_sys:
-        net_sys.write(r"""#!/bin/bash
-
-# networking.sh - Script completo para gerenciamento de rede em Linux
-# Autor: Auto-generated
-# Versão: 1.0
-
-# Cores para output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m' # No Color
-
-# Função para mostrar uso
-show_usage() {
-    echo -e "${GREEN}Networking.sh - Script de Gerenciamento de Rede${NC}"
-    echo "Uso: $0 [opção]"
-    echo ""
-    echo "Opções:"
-    echo "  status      - Mostrar status da rede"
-    echo "  interfaces  - Listar interfaces de rede"
-    echo "  ip          - Mostrar endereços IP"
-    echo "  routes      - Mostrar tabela de roteamento"
-    echo "  dns         - Mostrar servidores DNS"
-    echo "  ports       - Mostrar portas abertas"
-    echo "  connections - Mostrar conexões de rede"
-    echo "  restart     - Reiniciar serviço de rede"
-    echo "  test        - Testar conectividade"
-    echo "  all         - Executar todas as verificações"
-    echo "  --help      - Mostrar esta ajuda"
-    echo ""
-}
-
-# Função para verificar se é root
-check_root() {
-    if [[ $EUID -ne 0 ]]; then
-        echo -e "${YELLOW}Aviso: Alguns comandos podem requerer privilégios de root${NC}"
-        return 1
-    fi
-    return 0
-}
-
-# Função para mostrar status da rede
-show_status() {
-    echo -e "${BLUE}=== STATUS DA REDE ===${NC}"
-    ip link show
-    echo ""
-}
-
-# Função para listar interfaces
-show_interfaces() {
-    echo -e "${BLUE}=== INTERFACES DE REDE ===${NC}"
-    echo -e "${GREEN}Interfaces disponíveis:${NC}"
-    ip -o link show | awk -F': ' '{print $2}'
-    echo ""
-    
-    echo -e "${GREEN}Interfaces com detalhes:${NC}"
-    ip addr show
-    echo ""
-}
-
-# Função para mostrar endereços IP
-show_ip() {
-    echo -e "${BLUE}=== ENDEREÇOS IP ===${NC}"
-    
-    # IPv4
-    echo -e "${GREEN}Endereços IPv4:${NC}"
-    ip -4 addr show | grep -E "inet " | awk '{print $2 " on " $NF}'
-    echo ""
-    
-    # IPv6
-    echo -e "${GREEN}Endereços IPv6:${NC}"
-    ip -6 addr show | grep -E "inet6 " | awk '{print $2 " on " $NF}'
-    echo ""
-    
-    # IP público (requer internet)
-    echo -e "${GREEN}IP Público:${NC}"
-    curl -s ifconfig.me 2>/dev/null || echo "Não foi possível obter IP público"
-    echo -e "\n"
-}
-
-# Função para mostrar rotas
-show_routes() {
-    echo -e "${BLUE}=== TABELA DE ROTEAMENTO ===${NC}"
-    
-    echo -e "${GREEN}Tabela de roteamento IPv4:${NC}"
-    ip -4 route show
-    echo ""
-    
-    echo -e "${GREEN}Tabela de roteamento IPv6:${NC}"
-    ip -6 route show
-    echo ""
-}
-
-# Função para mostrar DNS
-show_dns() {
-    echo -e "${BLUE}=== SERVIDORES DNS ===${NC}"
-    
-    # Verificar resolv.conf
-    if [ -f /etc/resolv.conf ]; then
-        echo -e "${GREEN}/etc/resolv.conf:${NC}"
-        grep -E "nameserver|search|domain" /etc/resolv.conf
-    fi
-    echo ""
-    
-    # Verificar systemd-resolve (se disponível)
-    if command -v systemd-resolve &> /dev/null; then
-        echo -e "${GREEN}systemd-resolve --status:${NC}"
-        systemd-resolve --status 2>/dev/null | grep -A5 "DNS Servers" || echo "Não foi possível obter status do systemd-resolve"
-    fi
-    
-    # Testar resolução DNS
-    echo -e "${GREEN}Teste de resolução DNS:${NC}"
-    nslookup google.com 2>/dev/null | grep "Server\|Address" || echo "Falha no teste DNS"
-    echo ""
-}
-
-# Função para mostrar portas abertas
-show_ports() {
-    echo -e "${BLUE}=== PORTAS ABERTAS ===${NC}"
-    
-    if command -v ss &> /dev/null; then
-        echo -e "${GREEN}Portas listening (ss):${NC}"
-        ss -tuln | head -20
-    elif command -v netstat &> /dev/null; then
-        echo -e "${GREEN}Portas listening (netstat):${NC}"
-        netstat -tuln | head -20
-    else
-        echo -e "${RED}Erro: nem ss nem netstat encontrados${NC}"
-    fi
-    echo ""
-}
-
-# Função para mostrar conexões
-show_connections() {
-    echo -e "${BLUE}=== CONEXÕES DE REDE ===${NC}"
-    
-    if command -v ss &> /dev/null; then
-        echo -e "${GREEN}Conexões estabelecidas (ss):${NC}"
-        ss -tun | head -20
-    elif command -v netstat &> /dev/null; then
-        echo -e "${GREEN}Conexões estabelecidas (netstat):${NC}"
-        netstat -tun | head -20
-    fi
-    echo ""
-}
-
-# Função para reiniciar rede
-restart_network() {
-    check_root
-    echo -e "${BLUE}=== REINICIANDO SERVIÇO DE REDE ===${NC}"
-    
-    if systemctl is-active NetworkManager &> /dev/null; then
-        echo -e "${GREEN}Reiniciando NetworkManager...${NC}"
-        systemctl restart NetworkManager
-    elif systemctl is-active network &> /dev/null; then
-        echo -e "${GREEN}Reiniciando network service...${NC}"
-        systemctl restart network
-    elif command -v service &> /dev/null; then
-        echo -e "${GREEN}Reiniciando networking service...${NC}"
-        service networking restart
-    else
-        echo -e "${RED}Erro: Não foi possível identificar o gerenciador de rede${NC}"
-    fi
-    echo ""
-}
-
-# Função para testar conectividade
-test_connectivity() {
-    echo -e "${BLUE}=== TESTES DE CONECTIVIDADE ===${NC}"
-    
-    # Teste de loopback
-    echo -e "${GREEN}Teste de loopback:${NC}"
-    ping -c 2 127.0.0.1 >/dev/null 2>&1 && echo -e "${GREEN}✓ Loopback OK${NC}" || echo -e "${RED}✗ Loopback FALHOU${NC}"
-    echo ""
-    
-    # Teste de gateway
-    gateway=$(ip route show default 2>/dev/null | awk '/default/ {print $3}')
-    if [ -n "$gateway" ]; then
-        echo -e "${GREEN}Teste de gateway ($gateway):${NC}"
-        ping -c 2 $gateway >/dev/null 2>&1 && echo -e "${GREEN}✓ Gateway OK${NC}" || echo -e "${RED}✗ Gateway FALHOU${NC}"
-    else
-        echo -e "${YELLOW}Gateway não encontrado${NC}"
-    fi
-    echo ""
-    
-    # Teste de DNS
-    echo -e "${GREEN}Teste de DNS (google.com):${NC}"
-    ping -c 2 google.com >/dev/null 2>&1 && echo -e "${GREEN}✓ DNS OK${NC}" || echo -e "${RED}✗ DNS FALHOU${NC}"
-    echo ""
-    
-    # Teste de internet
-    echo -e "${GREEN}Teste de internet:${NC}"
-    curl -s --connect-timeout 5 http://www.example.com > /dev/null && \
-        echo -e "${GREEN}✓ Internet OK${NC}" || echo -e "${RED}✗ Internet FALHOU${NC}"
-    echo ""
-}
-
-# Função para mostrar todas as informações
-show_all() {
-    show_status
-    show_interfaces
-    show_ip
-    show_routes
-    show_dns
-    show_ports
-    show_connections
-    test_connectivity
-}
-
-# Tratamento de argumentos
-case "$1" in
-    "status")
-        show_status
-        ;;
-    "interfaces")
-        show_interfaces
-        ;;
-    "ip")
-        show_ip
-        ;;
-    "routes")
-        show_routes
-        ;;
-    "dns")
-        show_dns
-        ;;
-    "ports")
-        show_ports
-        ;;
-    "connections")
-        show_connections
-        ;;
-    "restart")
-        restart_network
-        ;;
-    "test")
-        test_connectivity
-        ;;
-    "all")
-        show_all
-        ;;
-    "--help"|"-h"|"help")
-        show_usage
-        ;;
-    *)
-        echo -e "${RED}Erro: Opção inválida${NC}"
-        echo ""
-        show_usage
-        exit 1
-        ;;
-esac
-
-exit 0
-""")
-    
-    os.chmod("shutdown.sh", 0o755)
-    os.chmod("restart.sh", 0o755)
-    os.chmod("network.sh", 0o755)
-    # Voltar ao diretório original
-    os.chdir(diroriginal)
 	
 def gerar_recursos_sistema():
     import os
@@ -744,7 +169,8 @@ def get_voice_input():
         print(f"⚠️ Erro ao acessar o serviço de reconhecimento: {e}")
 ''',
 
-        "ascii_image_display.py": '''from PIL import Image
+        "ascii_image_display.py": '''
+from PIL import Image
 from colorama import Fore, Style, init
 import os
 
@@ -759,21 +185,23 @@ def resize_image(image, new_width=80):
     return image.resize((new_width, new_height))
 
 def rgb_to_ansi(r, g, b):
-    return f"\\033[38;2;{r};{g};{b}m"
+    return f"\033[38;2;{r};{g};{b}m"
 
 def pixels_to_ascii_colored(image):
     pixels = image.getdata()
-    ascii_str = ""
+    colored_chars = []
+    
     for pixel in pixels:
         if isinstance(pixel, tuple):
             r, g, b = pixel[:3]
             char = ASCII_CHARS[sum(pixel[:3]) // 75]
             ansi_color = rgb_to_ansi(r, g, b)
-            ascii_str += f"{ansi_color}{char}"
+            colored_chars.append((ansi_color, char))
         else:
             char = ASCII_CHARS[pixel // 25]
-            ascii_str += char
-    return ascii_str
+            colored_chars.append(("", char))
+    
+    return colored_chars
 
 def display_ascii_image(path):
     if not os.path.exists(path):
@@ -787,31 +215,22 @@ def display_ascii_image(path):
         if image.mode != 'RGB':
             image = image.convert('RGB')
             
-        ascii_str = pixels_to_ascii_colored(image)
+        colored_chars = pixels_to_ascii_colored(image)
         img_width = image.width
-        ascii_img = "\\n".join([ascii_str[i:i+img_width] for i in range(0, len(ascii_str), img_width)])
-        print(ascii_img + "\\033[0m")
+        
+        for i in range(0, len(colored_chars), img_width):
+            line_chars = colored_chars[i:i+img_width]
+            line = ""
+            for ansi, char in line_chars:
+                line += f"{ansi}{char}"
+            print(line + "\033[0m")
         
     except Exception as e:
         print(f"❌ Erro ao processar imagem: {e}")
-''',
 
-        "device_comm.py": '''import platform
-import subprocess
-
-def list_devices():
-    system = platform.system()
-    print(f"🔍 Sistema detectado: {system}")
-    
-    if system == "Linux":
-        subprocess.run(["lsusb"])
-    elif system == "Windows":
-        subprocess.run(["powershell", "Get-PnpDevice"])
-    elif system == "Android":
-        subprocess.run(["adb", "devices"])
-    else:
-        print("❌ Sistema não suportado para comunicação com dispositivos.")
-'''
+# Exemplo de uso:
+# display_ascii_image("caminho/para/sua/imagem.jpg")
+        '''
     }
 
     for nome, conteudo in arquivos.items():
@@ -837,11 +256,11 @@ def pyOS():
     os.environ['TEMP'] = str(tmp_dir.absolute())
     os.environ['TMP'] = str(tmp_dir.absolute())
     os.makedirs("./pyOS/system/hostsys", exist_ok=True)
-    os.makedirs("./pyOS/proc", exist_ok=True)  # Este é o correto
     os.makedirs("./pyOS/systemRes", exist_ok=True)
     os.system("ln -s ../../systemRes ./pyOS/system/res")
     instalar_modulos()
-    instalar_hostsys()
+    with open("app_boot_perms.json", "w") as f:
+    	f.write("{}")
     gerar_recursos_sistema()
     with open("syscreated.txt", "w") as conclu:
     	conclu.write("True")
@@ -889,8 +308,6 @@ sys.path.insert(0, "pyOS/system/modules")
 try:
 	import pyOS_hora
 	import pyOS_system
-	import pyOS_calc
-	import pyOS_proc
 except Exception as e:
 	print(f"erro ao importar modulos: {e}")
 	
@@ -920,13 +337,13 @@ def calculadora():
 		return
 	# apenas operadores validos
 	elif op == "/" or op == "*" or op == "+" or op == "-" or op == "//" or op == "**" or op == "%":
-		res = pyOS_calc.calc(n1, op, n2)
+		res = eval(f"{n1} {op} {n2}")
 		if str(res).endswith(".0"):
 			res = int(res)
 		print(res)
 	else:
 		print("operador invalído!")
-	input("Pressione enter para sair...")
+	input("pressione enter para sair")
 	# impossivel injetar codigo, quem falar que pode não olhou o codigo direito
 	
 def notepad():
@@ -1021,43 +438,169 @@ def notepad():
         else:
             print("acao invalida")
 			
+def calcular_tamanho_pasta(caminho):
+    """
+    Calcula o tamanho total de uma pasta em bytes.
+    
+    Args:
+        caminho (str ou Path): Caminho para a pasta
+    
+    Returns:
+        int: Tamanho total em bytes
+    """
+    caminho = Path(caminho)
+    tamanho_total = 0
+    
+    if not caminho.exists():
+        raise FileNotFoundError(f"O caminho '{caminho}' não existe")
+    
+    if caminho.is_file():
+        return caminho.stat().st_size
+    
+    for item in caminho.rglob('*'):
+        if item.is_file():
+            tamanho_total += item.stat().st_size
+    
+    return tamanho_total
 
 
+def formatar_bytes(bytes_valor):
+    """
+    Formata um valor em bytes para uma string legível com unidade apropriada.
+    Mostra apenas os dígitos significativos sem casas decimais desnecessárias.
+    
+    Args:
+        bytes_valor (int): Valor em bytes
+    
+    Returns:
+        str: String formatada com a unidade apropriada
+    """
+    if bytes_valor == 0:
+        return "0 B"
+    
+    # Unidades de medida em ordem crescente
+    unidades = ['B', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB']
+    
+    # Encontra o índice da unidade apropriada
+    indice = 0
+    valor = float(bytes_valor)
+    
+    while valor >= 1024 and indice < len(unidades) - 1:
+        valor /= 1024
+        indice += 1
+    
+    # Remove casas decimais desnecessárias
+    if valor.is_integer():
+        return f"{int(valor)} {unidades[indice]}"
+    else:
+        # Remove zeros à direita e ponto se necessário
+        valor_str = f"{valor:.10f}".rstrip('0').rstrip('.')
+        return f"{valor_str} {unidades[indice]}"
 
 def config():
-	global colorconfig				
-	print("cores texto:\n1. azul\n2. vermelho\n3. amerelo\n4. magenta\n5. verde\n6. normal\n0. outras configuracoes")
-	coresc = input("cor(numero):")
-	if coresc == "1":
-		colorconfig = Fore.BLUE
-	elif coresc == "2":
-		colorconfig = Fore.RED
-	elif coresc == "3":
-		colorconfig = Fore.YELLOW
-	elif coresc == "4":
-		colorconfig = Fore.MAGENTA
-	elif coresc == "5":
-		colorconfig = Fore.GREEN
-	elif coresc == "6":
-		colorconfig = Fore.WHITE
-	elif coresc == "0":
-		print("opcoes:\n1. atualizar o pip\n2. informacoes\n3. desinstalar")
-		opcao = input("acao:")
-		if opcao == "1":
-			pyOS_system.upgpip()
-		elif opcao == "2":
-			print("info:")
-			print("nome: pyOS")
-			print(f"versão: {version}")
-			print(f"desenvolvedor: miguel cabral")
-			print("objetivo: ajudar pessoas com sistema linux sem interface grafica")
-			time.sleep(2)
-		elif opcao == "3":
-			os.system("clear")
-			criar_barra("desinstalar")
-			uninstall()
-	else:
-		print("invalido!")
+    global rodando2
+    def cls():
+        os.system("clear")
+        criar_barra("config")
+    while True:
+        cls()
+        print("configurações")
+        print("1. internet")
+        print("2. aplicativos")
+        print("3. desinstalar o pyOS")
+        print("outro. sair")
+        print()
+        try:
+            op = int(input("opção: "))
+        except:
+            print("diga uma opção valida")
+            continue
+        if op == 1:
+            cls()
+            print("1. controle de rede")
+            print("2. diagnóstico de rede")
+            print('outro. sair')
+            try:
+                op = int(input("opção: "))
+            except:
+                print("diga uma opção valida")
+                continue
+            if op == 1:
+                cls()
+                abrirapp("controle de internet")
+                cls()
+            elif op == 2:
+                cls()
+                abrirapp("diagnostico de rede")
+                cls()
+            else:
+                pass
+                cls()
+        elif op == 2:
+            cls()
+            apps = {}
+            for i, app in enumerate(os.listdir("./apps")):
+                apps[i] = app
+                print(f"{i}. {app}")
+            try:
+                op = int(input("opção: "))
+            except:
+                print("diga uma opção valida")
+                continue
+            if op not in apps:
+                print("esse app nao existe")
+            else:
+                cls()
+                path = f"{os.getcwd()}/apps/{apps[op]}"
+                wpath = f"{os.getcwd()}/workspace/{apps[op]}"
+                print(f"config {apps[op]}")
+                print("1. ver informações de espaço")
+                print("2. limpar dados")
+                print("3. desinstalar")
+                print("4. forçar encerramento")
+                print("outro. sair")
+                try:
+                    aop = int(input("opção: "))
+                except:
+                    print("diga uma opção valida")
+                    continue
+                if aop == 1:
+                    asize = calcular_tamanho_pasta(path)
+                    dsize = calcular_tamanho_pasta(wpath)
+                    total = asize + dsize
+                    print(f"app: {formatar_bytes(asize)}")
+                    print(f"dados: {formatar_bytes(dsize)}")
+                    print(f"total: {formatar_bytes(total)}")
+                    input("pressione enter para sair...")
+                elif aop == 2:
+                    shutil.rmtree(wpath)
+                    os.makedirs(wpath, exist_ok=True)
+                elif aop == 3:
+                    if apps[op] in rodando2:
+                        os.kill(rodando2[apps[op]], signal.SIGKILL)
+                        del rodando2[apps[op]]
+                    shutil.rmtree(wpath)
+                    shutil.rmtree(path)
+                    print(f"{apps[op]} desinstalado")
+                    time.sleep(0.3)
+                elif aop == 4:
+                    if apps[op] in rodando2:
+                        os.kill(rodando2[apps[op]], signal.SIGKILL)
+                        del rodando2[apps[op]]
+                else:
+                    cls()
+                    pass
+        elif op == 3:
+            os.system("clear")
+            criar_barra("desinstalar")
+            uninstall()
+        else:
+            break
+				
+				
+				
+		
+	
 		
 def terminal():
     import getpass
@@ -1071,7 +614,7 @@ def terminal():
         diret = os.getcwd()
         coman = input(Fore.CYAN + f"{__import__('socket').gethostname()}@{user} {diret}>" + Fore.RESET)
         
-        if coman == "quit":
+        if coman in ["quit", "exit"]:
             os.chdir(dir_original)
             executing = False
             
@@ -1081,8 +624,8 @@ def terminal():
         elif coman == "unlock_sys":
             apps["system-mgr"] = sysmgr
             print("system-mgr unlocked")
-        elif coman.startswith("noProtection "):
-            os.system(coman[len("noProtection "):])
+        elif coman.startswith("priv "):
+            os.system(coman[len("priv "):])
          
         
         else:
@@ -1199,11 +742,12 @@ def fileManager():
         print("\n📁 Gerenciador de Arquivos")
         print("[1] Listar arquivos")
         print("[2] Criar arquivo")
-        print("[3] Ler arquivo")
-        print("[4] Deletar arquivo/diretório")
-        print("[5] Mudar diretório")
-        print("[6] Voltar ao diretório anterior")
-        print("[7] Editar arquivo")
+        print("[3] Criar pasta")
+        print("[4] Ler arquivo")
+        print("[5] Deletar arquivo/diretório")
+        print("[6] Mudar diretório")
+        print("[7] Voltar ao diretório anterior")
+        print("[8] Editar arquivo")
         print("[0] Sair")
 
     current_dir = os.getcwd()
@@ -1229,16 +773,17 @@ def fileManager():
 
         elif opcao == "2":
             nome = input("Nome do arquivo: ")
-            conteudo = input("Conteúdo: ")
-            caminho = os.path.join(current_dir, nome)
-            try:
-                with open(caminho, "w", encoding="utf-8") as f:
-                    f.write(conteudo)
-                print(f"✅ Arquivo '{nome}' criado.")
-            except Exception as e:
-                print(f"❌ Erro ao criar arquivo: {e}")
-
+            os.system(f"nano {nome}")
         elif opcao == "3":
+            nome = input("nome da pasta: ")
+            if os.path.exists(nome):
+                print("ela ja existe")
+            else:
+                try:
+                    os.mkdir(nome)
+                except Exception as e:
+                    print("não foi possível criar a pasta", e)
+        elif opcao == "4":
             nome = input("Nome do arquivo: ")
             caminho = os.path.join(current_dir, nome)
             try:
@@ -1253,7 +798,7 @@ def fileManager():
             except Exception as e:
                 print(f"❌ Erro ao ler arquivo: {e}")
 
-        elif opcao == "4":
+        elif opcao == "5":
             nome = input("Nome do arquivo/diretório: ")
             caminho = os.path.join(current_dir, nome)
             try:
@@ -1274,7 +819,7 @@ def fileManager():
             except Exception as e:
                 print(f"❌ Erro ao deletar: {e}")
 
-        elif opcao == "5":
+        elif opcao == "6":
             novo_dir = input("Novo diretório: ")
             if not os.path.isabs(novo_dir):
                 novo_dir = os.path.join(current_dir, novo_dir)
@@ -1285,7 +830,7 @@ def fileManager():
             else:
                 print("❌ Diretório inválido.")
 
-        elif opcao == "6":
+        elif opcao == "7":
             parent_dir = os.path.dirname(current_dir)
             if os.path.isdir(parent_dir):
                 current_dir = parent_dir
@@ -1293,7 +838,7 @@ def fileManager():
             else:
                 print("❌ Não é possível voltar mais")
 
-        elif opcao == "7":
+        elif opcao == "8":
             nome = input("Nome do arquivo a editar: ")
             caminho = os.path.join(current_dir, nome)
             try:
@@ -1320,651 +865,1664 @@ def fileManager():
 
         else:
             print("⚠️ Opção inválida.")
-aeac = {}
-def appsInstalados():
-	global aeac
-	def deps(arquivopython):
-		dependencias = set()
-		with open(arquivopython, 'r', encoding='utf-8') as f:
-			for linha in f:
-				linha = linha.strip()
-				match_import = re.match(r'^import\s+([\w\.]+)', linha)
-				if match_import:
-					dependencias.add(match_import.group(1).split('.')[0])
-					continue
-
-				match_from = re.match(r'^from\s+([\w\.]+)\s+import\s+', linha)
-				if match_from:
-					dependencias.add(match_from.group(1).split('.')[0])
-					continue
-
-		return list(dependencias)
-	
-	
-	while True:
-		print("opcoes:\n1. instalar dependencias dos apps\n2. executar apps\n3. ver dependencias de apps\n4. instalar apps simples\n5. instalar dependencias no python dir\n6. instalar app completo\n7. executar apps completos\n8. definir arquivos python para apps completos\n9. ver arquivos de apps completos\n0. sair")
-		acao = input("acao: ")
-		if acao == "1":
-			instalar = input("dependência (nome): ")
-			os.system(f"pip install {instalar} --target=./apps/libs")
-		elif acao == "2":
-			app = input("app (sem o .py no final): ")
-			os.system("clear")
-			try:
-				print(f'{app}                 {pyOS_system.winbtn}')
-			except Exception:
-				print(f'{app}                 ? ? ?')
-
-			app_path = os.path.join("apps", f"{app}.py")
-			if os.path.exists(app_path):
-				try:
-					# CORREÇÃO: Adicionar o path correto para apps/libs
-					libs_path = os.path.abspath("./apps/libs")
-					
-					res_path = os.path.abspath("./pyOS/systemRes")
-					
-					if libs_path not in sys.path:
-						sys.path.insert(0, libs_path)
-					if res_path not in sys.path:
-						sys.path.insert(0, res_path)
-					
-					with open(app_path, 'r', encoding='utf-8') as f:
-						codigo_app = f.read()
-					
-					# Executar o código do app
-					exec(codigo_app, {"__builtins__": __builtins__}, {})
-				except Exception as e:
-					print(f"Erro ao executar app: {e}")
-					time.sleep(3)
-			else:
-				print(f"App {app} não encontrado!")
-				time.sleep(3)
-
-					
-		elif acao == "3":
-			arquivo = input("arquivo: ")
-			depen = deps("apps/" + arquivo)
-			for depens in depen:
-				print(depens)
-				time.sleep(3)
-		elif acao == "4":
-			url = input("url: ")
-			resposta = requests.get(url)
-			nome = url.split('/')[-1]
-			caminho = os.path.join('./apps', nome)
-			with open(caminho, 'wb') as app:
-				app.write(resposta.content)
-		elif acao == "5":
-			lib = input("biblioteca: ")
-			os.system(f"pip install {lib}")
-		elif acao == "0":
-			break
-		elif acao == "6":
-			url = input("url: ")
-			# Extrai o nome do repositório da URL
-			repo_name = url.split('/')[-1]
-			if repo_name.endswith('.git'):
-				repo_name = repo_name[:-4]  # Remove .git se existir
-			
-			# Clona para um subdiretório dentro de ./apps
-			destino = f"./apps/{repo_name}"
-			os.system(f"git clone {url} {destino}")
-			aeac[repo_name] = 'main.py'  # Define o arquivo principal
-			print(f"Repositório clonado em: {destino}")
-		elif acao == "7":
-			app = input("pasta: ")
-			arquivo = aeac.get(app)
-			if arquivo:
-				caminho = f"./apps/{app}/{arquivo}"
-				if os.path.exists(caminho):
-					# Adicionar diretório de libs ao path
-					libs_path = os.path.abspath("./apps/libs")
-					if libs_path not in sys.path:
-						sys.path.insert(0, libs_path)
-					
-					with open(caminho, 'r', encoding='utf-8') as appcom:
-						exec(appcom.read(), globals())
-				else:
-					print(f"Arquivo {arquivo} não encontrado em {app}")
-			else:
-				print(f"App {app} não configurado")
-		elif acao == "8":
-			app_pra_configurar = input("app: ")
-			novo_arquivo = input("novo arquivo: ")
-			aeac[app_pra_configurar] = novo_arquivo
-		elif acao == "9":
-			app = input("app: ")
-			try:
-				arquivos = os.listdir(f"./apps/{app}")
-				for arquivo in arquivos:
-					print(arquivo)
-			except FileNotFoundError:
-				print(f"Pasta ./apps/{app} não encontrada")
-
-def navegador_tui():
-    try:
-        from bs4 import BeautifulSoup
-    except ModuleNotFoundError:
-        os.system(f"{sys.executable} -m pip install beautifulsoup4")
-        from bs4 import BeautifulSoup
-
-    try:
-        import pyfiglet
-    except ModuleNotFoundError:
-        os.system(f"{sys.executable} -m pip install pyfiglet")
-        import pyfiglet
-
-    largura = os.get_terminal_size().columns
-    sessao = requests.Session()
-
-    print(Fore.CYAN + pyfiglet.figlet_format("Navegador TUI", font="slant"))
-    entrada = input(Fore.YELLOW + "🌐 Digite uma URL ou termo de busca: " + Style.RESET_ALL).strip()
-    url = entrada if re.match(r'^https?://', entrada) else f"https://www.google.com/search?q={requests.utils.quote(entrada)}"
-
-    try:
-        resposta = sessao.get(url, headers={'User-Agent': 'Mozilla/5.0'}, allow_redirects=True)
-        resposta.raise_for_status()
-    except requests.exceptions.RequestException as e:
-        print(Fore.RED + f"❌ Erro ao acessar a página: {e}" + Style.RESET_ALL)
-        return
-
-    soup = BeautifulSoup(resposta.text, 'html.parser')
-    titulo = soup.title.string.strip() if soup.title and soup.title.string else "Sem título"
-    print(Fore.MAGENTA + pyfiglet.figlet_format(titulo[:40], font="digital"))
-
-    # Renderização TUI
-    print(Fore.WHITE + "╔" + "═" * (largura - 2) + "╗")
-
-    # Renderiza cabeçalhos
-    for h in soup.find_all(re.compile('^h[1-6]$'))[:5]:
-        nivel = int(h.name[1])
-        texto = h.get_text(strip=True)
-        cor = [Fore.BLUE, Fore.CYAN, Fore.GREEN, Fore.YELLOW, Fore.MAGENTA, Fore.WHITE][nivel - 1]
-        print("║ " + cor + (" " * nivel + texto).ljust(largura - 4) + Style.RESET_ALL + " ║")
-
-    # Renderiza parágrafos
-    for p in soup.find_all('p')[:5]:
-        texto = p.get_text(strip=True)
-        for linha in re.findall(r'.{1,' + str(largura - 4) + '}', texto):
-            print("║ " + Fore.LIGHTWHITE_EX + linha.ljust(largura - 4) + Style.RESET_ALL + " ║")
-
-    # Renderiza formulários
-    formularios = soup.find_all('form')
-    for i, form in enumerate(formularios):
-        print("║" + Fore.YELLOW + f" [📝 FORMULÁRIO {i+1}] ".center(largura - 2) + Style.RESET_ALL + "║")
-        campos = form.find_all('input')
-        botoes = form.find_all('button')
-        for campo in campos:
-            nome = campo.get('name') or 'sem_nome'
-            tipo = campo.get('type') or 'text'
-            placeholder = campo.get('placeholder') or nome
-            print("║ " + Fore.YELLOW + f"[{tipo.upper()}] {placeholder}".ljust(largura - 4) + Style.RESET_ALL + " ║")
-        for botao in botoes:
-            texto = botao.get_text(strip=True) or botao.get('value') or 'Botão'
-            print("║ " + Fore.GREEN + f"[🟩 BOTÃO] {texto}".ljust(largura - 4) + Style.RESET_ALL + " ║")
-
-        # Interação com formulário
-        print("║" + " " * (largura - 2) + "║")
-        print("║ " + Fore.CYAN + "Deseja preencher este formulário? (s/n): ".ljust(largura - 4) + Style.RESET_ALL + " ║")
-        if input("👉 ").lower().startswith("s"):
-            dados = {}
-            for campo in campos:
-                nome = campo.get('name')
-                if nome:
-                    valor = input(Fore.YELLOW + f"✍️ {nome}: " + Style.RESET_ALL)
-                    dados[nome] = valor
-            metodo = form.get('method', 'get').lower()
-            acao = form.get('action') or url
+       
+def navegador():
+    """Navegador TUI completo com suporte a mouse, renderização fiel e formulários"""
+    import curses
+    import yaml
+    from bs4 import BeautifulSoup, Comment
+    import requests
+    from PIL import Image
+    import io
+    import os
+    import sys
+    import time
+    from urllib.parse import urljoin, urlparse
+    
+    class VirtualMouse:
+        def __init__(self, config_file='mouse_tui_browser.yml'):
+            self.x = 0
+            self.y = 0
+            self.enabled = False
+            self.clicked = False
+            self.last_click_x = -1
+            self.last_click_y = -1
+            self.sensitivity = 1
+            self.load_config(config_file)
+        
+        def load_config(self, config_file):
             try:
-                if metodo == 'post':
-                    resposta = sessao.post(acao, data=dados)
+                with open(config_file, 'r') as f:
+                    config = yaml.safe_load(f)
+                    self.enabled = config.get('mouse_enabled', False)
+                    self.sensitivity = config.get('mouse_sensitivity', 1)
+            except:
+                self.enabled = False
+        
+        def move(self, dx, dy):
+            if self.enabled:
+                self.x += dx * self.sensitivity
+                self.y += dy * self.sensitivity
+        
+        def click(self, x, y):
+            if self.enabled:
+                self.clicked = True
+                self.last_click_x = x
+                self.last_click_y = y
+        
+        def release(self):
+            self.clicked = False
+    
+    class TUIBrowser:
+        def __init__(self):
+            self.stdscr = None
+            self.mouse = VirtualMouse()
+            self.current_url = ""
+            self.base_url = ""
+            self.raw_html = ""
+            self.parsed_content = None
+            self.elements = []
+            self.history = []
+            self.history_index = -1
+            self.selected_element = 0
+            self.input_mode = False
+            self.input_text = ""
+            self.input_element = None
+            self.input_field_index = -1
+            self.status_message = ""
+            self.status_timer = 0
+            self.scroll_offset = 0
+            self.content_lines = []
+            self.content_positions = []
+            self.form_data = {}
+            self.last_render_time = 0
+            self.needs_render = True
+            self.status_is_error = False
+            
+        def init_curses(self):
+            self.stdscr = curses.initscr()
+            curses.noecho()
+            curses.cbreak()
+            self.stdscr.keypad(True)
+            self.stdscr.nodelay(False)
+            self.stdscr.timeout(100)
+            
+            try:
+                curses.mousemask(curses.ALL_MOUSE_EVENTS | curses.REPORT_MOUSE_POSITION)
+                curses.mouseinterval(0)
+                print("\033[?1003h\033[?1015h\033[?1006h")
+                self.mouse.enabled = True
+            except:
+                self.mouse.enabled = False
+            
+            try:
+                curses.start_color()
+                curses.use_default_colors()
+                if curses.COLORS >= 8:
+                    curses.init_pair(1, curses.COLOR_CYAN, -1)
+                    curses.init_pair(2, curses.COLOR_GREEN, -1)
+                    curses.init_pair(3, curses.COLOR_YELLOW, -1)
+                    curses.init_pair(4, curses.COLOR_RED, -1)
+                    curses.init_pair(5, curses.COLOR_WHITE, curses.COLOR_BLUE)
+                    curses.init_pair(6, curses.COLOR_BLACK, curses.COLOR_WHITE)
+                    curses.init_pair(7, curses.COLOR_BLUE, -1)
+                    curses.init_pair(8, curses.COLOR_MAGENTA, -1)
+                    self.has_colors = True
                 else:
-                    resposta = sessao.get(acao, params=dados)
-                print(Fore.GREEN + "✅ Formulário enviado com sucesso!" + Style.RESET_ALL)
-                print(Fore.CYAN + f"🔁 Redirecionado para: {resposta.url}" + Style.RESET_ALL)
-            except Exception as e:
-                print(Fore.RED + f"❌ Erro ao enviar formulário: {e}" + Style.RESET_ALL)
-
-    print("╚" + "═" * (largura - 2) + "╝")
-    input(Fore.CYAN + "\n🧭 Pressione Enter para encerrar..." + Style.RESET_ALL)
-
-def taskmgr():
-    # Salva o diretório atual para retornar depois
-    diretorio_original = os.getcwd()
-    
-    # Define o caminho correto para o diretório de processos
-    proc_dir = "./pyOS/proc"
-    
-    # Verifica se o diretório existe
-    if not os.path.exists(proc_dir):
-        print("❌ Diretório de processos não encontrado!")
-        print("Tentando criar o diretório...")
-        try:
-            os.makedirs(proc_dir, exist_ok=True)
-            print("✅ Diretório criado com sucesso!")
-        except Exception as e:
-            print(f"❌ Erro ao criar diretório: {e}")
-            return
-    
-    try:
-        # Muda para o diretório de processos
-        os.chdir(proc_dir)
+                    self.has_colors = False
+            except:
+                self.has_colors = False
         
-        # Lista os processos
-        processos = os.listdir()
-        if not processos:
-            print("📭 Nenhum processo em execução")
-        else:
-            print("📋 Processos em execução:")
-            for pasta in processos:
-                caminho_pasta = os.path.join(pasta)
-                if os.path.isdir(caminho_pasta):
-                    caminho_nome = os.path.join(pasta, 'nome.txt')
-                    if os.path.isfile(caminho_nome):
-                        try:
-                            nome = open(caminho_nome, encoding='utf-8').read().strip()
-                            print(f"• {nome} [PID: {pasta}]")
-                        except:
-                            print(f"• Processo sem nome [PID: {pasta}]")
+        def cleanup_curses(self):
+            try:
+                print("\033[?1003l\033[?1015l\033[?1006l")
+                curses.nocbreak()
+                self.stdscr.keypad(False)
+                curses.echo()
+                curses.endwin()
+            except:
+                pass
         
-        # Opção para encerrar processo
-        escolha = input("\n🔴 Digite o PID do processo para encerrar (ou 'quit' para sair): ")
-        if escolha == "quit":
-            return
-        elif escolha in processos:
-            confirmar = input(f"⚠️  Tem certeza que deseja encerrar o processo {escolha}? (s/n): ")
-            if confirmar.lower() == 's':
-                import shutil
+        def get_color_pair(self, num):
+            if self.has_colors:
                 try:
-                    shutil.rmtree(escolha)
-                    print(f"✅ Processo {escolha} encerrado com sucesso!")
-                except Exception as e:
-                    print(f"❌ Erro ao encerrar processo: {e}")
-        else:
-            print("❌ PID não encontrado!")
+                    return curses.color_pair(num)
+                except:
+                    return 0
+            return 0
+        
+        def set_status(self, message, is_error=False):
+            self.status_message = message
+            self.status_timer = 100
+            self.status_is_error = is_error
+        
+        def clean_html(self, soup):
+            """Remove tags indesejadas do HTML"""
+            # Remove scripts
+            for script in soup.find_all(['script', 'style', 'noscript']):
+                script.decompose()
             
-    except Exception as e:
-        print(f"❌ Erro no gerenciador de tarefas: {e}")
-    finally:
-        # Sempre retorna ao diretório original
-        os.chdir(diretorio_original)
-        time.sleep(2)
-def messages():
-    """
-    App de mensagens em rede - usuários podem conversar de qualquer lugar
-    """
-    
-    # Arquivos de armazenamento
-    MSGS_FILE = "msgs.json"
-    USERS_FILE = "name_user.txt"
-    
-    # Configurações do servidor
-    HOST = '0.0.0.0'  # Escuta em todas as interfaces
-    PORT = 12345
-    server_socket = None
-    clients = {}  # {client_socket: {'id': id, 'name': name}}
-    
-    def inicializar_arquivos():
-        """Inicializa os arquivos se não existirem"""
-        if not os.path.exists(MSGS_FILE):
-            with open(MSGS_FILE, 'w') as f:
-                json.dump({}, f)
-        
-        if not os.path.exists(USERS_FILE):
-            with open(USERS_FILE, 'w') as f:
-                f.write("")
-    
-    def gerar_id():
-        """Gera um ID único para o usuário"""
-        return random.randint(1000, 9999)
-    
-    def carregar_usuarios():
-        """Carrega os usuários do arquivo"""
-        try:
-            with open(USERS_FILE, 'r') as f:
-                linhas = f.readlines()
+            # Remove comentários
+            for comment in soup.find_all(text=lambda text: isinstance(text, Comment)):
+                comment.extract()
             
-            usuarios = {}
-            for linha in linhas:
-                if linha.strip():
-                    id_user, nome = linha.strip().split('|')
-                    usuarios[int(id_user)] = nome
-            return usuarios
-        except:
-            return {}
-    
-    def salvar_usuario(id_user, nome):
-        """Salva um novo usuário"""
-        with open(USERS_FILE, 'a') as f:
-            f.write(f"{id_user}|{nome}\n")
-    
-    def carregar_mensagens():
-        """Carrega todas as mensagens"""
-        try:
-            with open(MSGS_FILE, 'r') as f:
-                return json.load(f)
-        except:
-            return {}
-    
-    def salvar_mensagens(mensagens):
-        """Salva todas as mensagens"""
-        with open(MSGS_FILE, 'w') as f:
-            json.dump(mensagens, f, indent=2)
-    
-    def adicionar_mensagem(remetente_id, destinatario_id, mensagem):
-        """Adiciona uma nova mensagem"""
-        mensagens = carregar_mensagens()
-        
-        chave = f"{min(remetente_id, destinatario_id)}_{max(remetente_id, destinatario_id)}"
-        
-        if chave not in mensagens:
-            mensagens[chave] = []
-        
-        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        mensagens[chave].append({
-            'remetente': remetente_id,
-            'mensagem': mensagem,
-            'timestamp': timestamp
-        })
-        
-        salvar_mensagens(mensagens)
-        return mensagens[chave]
-    
-    def obter_mensagens(user1_id, user2_id):
-        """Obtém mensagens entre dois usuários"""
-        mensagens = carregar_mensagens()
-        chave = f"{min(user1_id, user2_id)}_{max(user1_id, user2_id)}"
-        
-        if chave in mensagens:
-            return mensagens[chave]
-        return []
-    
-    def iniciar_servidor():
-        """Inicia o servidor de mensagens"""
-        global server_socket
-        
-        server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        
-        try:
-            server_socket.bind((HOST, PORT))
-            server_socket.listen(5)
-            print(f"🚀 Servidor iniciado em {HOST}:{PORT}")
-            print("Aguardando conexões...")
+            # Remove meta, link, etc
+            for tag in soup.find_all(['meta', 'link', 'head']):
+                tag.decompose()
             
-            while True:
-                client_socket, addr = server_socket.accept()
-                print(f"✅ Nova conexão de {addr}")
+            return soup
+        
+        def fetch_url(self, url):
+            if not url:
+                return False
                 
-                # Thread para lidar com o cliente
-                client_thread = threading.Thread(
-                    target=handle_client, 
-                    args=(client_socket, addr)
-                )
-                client_thread.daemon = True
-                client_thread.start()
-                
-        except Exception as e:
-            print(f"❌ Erro no servidor: {e}")
-    
-    def handle_client(client_socket, addr):
-        """Lida com as mensagens de um cliente"""
-        try:
-            # Receber dados de login
-            login_data = client_socket.recv(1024).decode('utf-8')
-            user_id, user_name = login_data.split('|')
-            user_id = int(user_id)
+            if not url.startswith(('http://', 'https://')):
+                url = 'https://' + url
             
-            clients[client_socket] = {'id': user_id, 'name': user_name}
-            print(f"👤 {user_name} (ID: {user_id}) conectado")
-            
-            # Enviar confirmação
-            client_socket.send("CONNECTED".encode('utf-8'))
-            
-            while True:
-                # Receber mensagem do cliente
-                data = client_socket.recv(1024).decode('utf-8')
-                if not data:
-                    break
+            try:
+                self.set_status(f"Carregando {url}...")
+                self.needs_render = True
                 
-                if data.startswith("GET_MSGS|"):
-                    # Cliente solicitando mensagens
-                    destinatario_id = int(data.split('|')[1])
-                    mensagens = obter_mensagens(user_id, destinatario_id)
-                    client_socket.send(json.dumps(mensagens).encode('utf-8'))
+                headers = {
+                    'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36'
+                }
+                response = requests.get(url, headers=headers, timeout=10)
+                response.raise_for_status()
                 
-                elif data.startswith("SEND_MSG|"):
-                    # Cliente enviando mensagem
-                    partes = data.split('|')
-                    destinatario_id = int(partes[1])
-                    mensagem = partes[2]
+                self.current_url = url
+                self.base_url = url
+                self.raw_html = response.text
+                
+                if url not in self.history:
+                    self.history.append(url)
+                    self.history_index = len(self.history) - 1
+                
+                self.parsed_content = BeautifulSoup(response.text, 'html.parser')
+                self.parsed_content = self.clean_html(self.parsed_content)
+                self.parse_elements()
+                self.render_to_lines()
+                self.set_status(f"✓ Página carregada: {url}")
+                self.selected_element = 0
+                self.scroll_offset = 0
+                return True
+                
+            except requests.exceptions.RequestException as e:
+                self.raw_html = f"Erro ao carregar {url}: {str(e)}"
+                self.parsed_content = None
+                self.elements = []
+                self.content_lines = self.raw_html.split('\n')
+                self.set_status(f"Erro: {str(e)[:50]}", True)
+                return False
+        
+        def parse_elements(self):
+            self.elements = []
+            
+            if not self.parsed_content:
+                return
+            
+            # Links - apenas os que tem href
+            for i, a in enumerate(self.parsed_content.find_all('a', href=True)):
+                text = a.get_text(strip=True)
+                href = a['href']
+                if text and not href.startswith('javascript:'):
+                    self.elements.append({
+                        'id': f"link_{i}",
+                        'type': 'link',
+                        'text': text[:60],
+                        'href': href,
+                        'element': a,
+                        'y_pos': -1
+                    })
+            
+            # Botões
+            for i, button in enumerate(self.parsed_content.find_all('button')):
+                text = button.get_text(strip=True)
+                if text:
+                    self.elements.append({
+                        'id': f"button_{i}",
+                        'type': 'button',
+                        'text': text[:60],
+                        'element': button,
+                        'y_pos': -1
+                    })
+            
+            # Inputs
+            for i, input_field in enumerate(self.parsed_content.find_all('input')):
+                input_type = input_field.get('type', 'text')
+                if input_type not in ['hidden', 'submit', 'button']:
+                    name = input_field.get('name', f'input_{i}')
+                    placeholder = input_field.get('placeholder', '')
+                    value = input_field.get('value', '')
                     
-                    adicionar_mensagem(user_id, destinatario_id, mensagem)
-                    client_socket.send("MSG_SENT".encode('utf-8'))
+                    self.elements.append({
+                        'id': f"input_{i}",
+                        'type': 'input',
+                        'input_type': input_type,
+                        'name': name,
+                        'placeholder': placeholder,
+                        'value': value,
+                        'text': f"[{input_type}] {placeholder or name}",
+                        'element': input_field,
+                        'y_pos': -1
+                    })
+            
+            # Imagens
+            for i, img in enumerate(self.parsed_content.find_all('img')):
+                src = img.get('src', '')
+                alt = img.get('alt', '')
+                if src and not src.startswith('data:'):
+                    self.elements.append({
+                        'id': f"img_{i}",
+                        'type': 'image',
+                        'src': src,
+                        'alt': alt or 'imagem',
+                        'text': f"[IMAGEM] {alt[:40] if alt else 'sem descrição'}",
+                        'element': img,
+                        'y_pos': -1
+                    })
+        
+        def get_visible_text(self, element):
+            """Extrai texto visível ignorando tags de script/style"""
+            if element.name in ['script', 'style', 'noscript']:
+                return ""
+            return element.get_text(strip=True)
+        
+        def render_to_lines(self):
+            """Renderiza o HTML preservando a estrutura e posições"""
+            self.content_lines = []
+            self.content_positions = []
+            
+            if not self.parsed_content:
+                self.content_lines = ["Sem conteúdo para exibir"]
+                return
+            
+            h, w = self.stdscr.getmaxyx()
+            content_width = w - 45 if w >= 80 else w - 2
+            
+            # Pega o body
+            body = self.parsed_content.body
+            if not body:
+                body = self.parsed_content
+            
+            y_pos = 0
+            element_index = 0
+            
+            def process_node(node, indent=0):
+                nonlocal y_pos, element_index
+                
+                if node.name is None:
+                    # Texto puro
+                    text = str(node).strip()
+                    if text and not text.startswith('<'):
+                        lines = self.wrap_text(text, content_width - indent)
+                        for line in lines:
+                            if indent > 0:
+                                self.content_lines.append(' ' * indent + line)
+                            else:
+                                self.content_lines.append(line)
+                            y_pos += 1
+                
+                elif node.name in ['h1', 'h2', 'h3', 'h4', 'h5', 'h6']:
+                    text = self.get_visible_text(node)
+                    if text:
+                        level = int(node.name[1])
+                        prefix = '#' * level + ' '
+                        lines = self.wrap_text(prefix + text, content_width)
+                        for line in lines:
+                            # Centraliza títulos
+                            if len(line) < content_width:
+                                spaces = (content_width - len(line)) // 2
+                                line = ' ' * spaces + line
+                            self.content_lines.append(line)
+                            y_pos += 1
+                        self.content_lines.append('')
+                        y_pos += 1
+                
+                elif node.name == 'p':
+                    text = self.get_visible_text(node)
+                    if text:
+                        lines = self.wrap_text(text, content_width)
+                        for line in lines:
+                            self.content_lines.append(line)
+                            y_pos += 1
+                        self.content_lines.append('')
+                        y_pos += 1
+                
+                elif node.name == 'br':
+                    self.content_lines.append('')
+                    y_pos += 1
+                
+                elif node.name == 'hr':
+                    self.content_lines.append('─' * content_width)
+                    y_pos += 1
+                
+                elif node.name in ['ul', 'ol']:
+                    for i, li in enumerate(node.find_all('li', recursive=False)):
+                        text = self.get_visible_text(li)
+                        bullet = '•' if node.name == 'ul' else f'{i+1}.'
+                        lines = self.wrap_text(f"{bullet} {text}", content_width - 2)
+                        for line in lines:
+                            self.content_lines.append('  ' + line)
+                            y_pos += 1
+                
+                elif node.name == 'table':
+                    rows = node.find_all('tr')
+                    for row in rows:
+                        cols = row.find_all(['td', 'th'])
+                        if cols:
+                            row_text = []
+                            for col in cols:
+                                col_text = self.get_visible_text(col)[:15]
+                                row_text.append(col_text.ljust(15))
+                            self.content_lines.append(' '.join(row_text))
+                            y_pos += 1
+                    self.content_lines.append('')
+                    y_pos += 1
+                
+                elif node.name == 'a' and node.get('href'):
+                    # Links interativos
+                    text = self.get_visible_text(node)
+                    if text:
+                        if element_index < len(self.elements):
+                            self.elements[element_index]['y_pos'] = y_pos
+                            element_index += 1
+                        
+                        href = node.get('href', '')
+                        display_text = f"[ {text} ]"
+                        lines = self.wrap_text(display_text, content_width)
+                        for line in lines:
+                            self.content_lines.append(line)
+                            y_pos += 1
+                
+                elif node.name == 'button':
+                    text = self.get_visible_text(node)
+                    if text:
+                        if element_index < len(self.elements):
+                            self.elements[element_index]['y_pos'] = y_pos
+                            element_index += 1
+                        
+                        self.content_lines.append(f"[ {text} ]")
+                        y_pos += 1
+                
+                elif node.name == 'input':
+                    input_type = node.get('type', 'text')
+                    if input_type not in ['hidden']:
+                        if element_index < len(self.elements):
+                            self.elements[element_index]['y_pos'] = y_pos
+                            element_index += 1
+                        
+                        placeholder = node.get('placeholder', '')
+                        value = node.get('value', '')
+                        
+                        if input_type == 'checkbox':
+                            checked = 'x' if node.get('checked') else ' '
+                            self.content_lines.append(f'[{checked}] {placeholder}')
+                        elif input_type == 'radio':
+                            checked = '●' if node.get('checked') else '○'
+                            self.content_lines.append(f'{checked} {placeholder}')
+                        else:
+                            display = value or placeholder or '...'
+                            self.content_lines.append(f'[ {display[:30]} ]')
+                        y_pos += 1
+                
+                elif node.name == 'img':
+                    if element_index < len(self.elements):
+                        self.elements[element_index]['y_pos'] = y_pos
+                        element_index += 1
                     
-                    # Notificar destinatário se estiver online
-                    notify_destinatario(user_id, destinatario_id, mensagem)
+                    alt = node.get('alt', '')
+                    self.content_lines.append(f'🖼️  {alt or "Imagem"}')
+                    y_pos += 1
                 
-                elif data == "LIST_USERS":
-                    # Listar usuários
-                    usuarios = carregar_usuarios()
-                    client_socket.send(json.dumps(usuarios).encode('utf-8'))
+                elif node.name == 'div':
+                    # Processa filhos de div
+                    for child in node.children:
+                        if child.name or (child.string and child.string.strip()):
+                            process_node(child, indent + 2)
                 
-        except Exception as e:
-            print(f"❌ Erro com cliente {addr}: {e}")
-        finally:
-            if client_socket in clients:
-                print(f"👋 {clients[client_socket]['name']} desconectou")
-                del clients[client_socket]
-            client_socket.close()
-    
-    def notify_destinatario(remetente_id, destinatario_id, mensagem):
-        """Notifica o destinatário sobre nova mensagem"""
-        for client, info in clients.items():
-            if info['id'] == destinatario_id:
+                else:
+                    # Processa outros elementos
+                    for child in node.children:
+                        if child.name or (child.string and child.string.strip()):
+                            process_node(child, indent)
+            
+            # Processa o body
+            for child in body.children:
+                process_node(child)
+            
+            # Remove linhas vazias consecutivas
+            cleaned_lines = []
+            prev_empty = False
+            for line in self.content_lines:
+                if line.strip() == '':
+                    if not prev_empty:
+                        cleaned_lines.append('')
+                    prev_empty = True
+                else:
+                    cleaned_lines.append(line)
+                    prev_empty = False
+            
+            self.content_lines = cleaned_lines
+        
+        def wrap_text(self, text, width):
+            """Quebra texto em linhas respeitando palavras"""
+            if not text:
+                return []
+            
+            lines = []
+            words = text.split()
+            current_line = ""
+            
+            for word in words:
+                if len(current_line + " " + word) <= width:
+                    current_line += (" " + word if current_line else word)
+                else:
+                    if current_line:
+                        lines.append(current_line)
+                    current_line = word
+            
+            if current_line:
+                lines.append(current_line)
+            
+            return lines if lines else [text[:width]]
+        
+        def draw_header(self):
+            h, w = self.stdscr.getmaxyx()
+            if h < 5 or w < 60:
+                self.stdscr.addstr(0, 0, "Terminal muito pequeno!")
+                return
+                
+            url_display = self.current_url if self.current_url else "Nenhuma página"
+            if len(url_display) > w - 20:
+                url_display = url_display[:w-23] + "..."
+            
+            header = f" 🌐 Navegador TUI - {url_display} "
+            hist_pos = f" [{self.history_index+1}/{len(self.history)}]" if self.history else ""
+            
+            try:
+                if self.has_colors:
+                    self.stdscr.addstr(0, 0, header[:w-1], self.get_color_pair(1) | curses.A_BOLD)
+                    if hist_pos:
+                        self.stdscr.addstr(0, w-len(hist_pos)-1, hist_pos, self.get_color_pair(2))
+                    self.stdscr.addstr(1, 0, "─" * (w-1), self.get_color_pair(2))
+                else:
+                    self.stdscr.addstr(0, 0, header[:w-1], curses.A_BOLD)
+                    if hist_pos:
+                        self.stdscr.addstr(0, w-len(hist_pos)-1, hist_pos)
+                    self.stdscr.addstr(1, 0, "─" * (w-1))
+            except:
+                pass
+        
+        def draw_content(self):
+            h, w = self.stdscr.getmaxyx()
+            start_y = 3
+            max_lines = h - 5
+            content_width = w - 45 if w >= 80 else w - 2
+            
+            content_x = 1 if w < 80 else 1
+            menu_x = w - 44 if w >= 80 else w
+            
+            try:
+                # Desenha conteúdo
+                display_lines = self.content_lines[self.scroll_offset:self.scroll_offset + max_lines]
+                
+                for i, line in enumerate(display_lines):
+                    y = start_y + i
+                    if y >= h - 2:
+                        break
+                    
+                    # Verifica se esta linha contém elemento selecionado
+                    is_selected = False
+                    absolute_y = self.scroll_offset + i
+                    
+                    for elem in self.elements:
+                        if elem.get('y_pos') == absolute_y and self.elements.index(elem) == self.selected_element:
+                            is_selected = True
+                            break
+                    
+                    # Desenha com destaque se selecionado
+                    if is_selected and not self.input_mode:
+                        attr = self.get_color_pair(5) | curses.A_BOLD if self.has_colors else curses.A_REVERSE
+                        self.stdscr.addstr(y, content_x, line[:content_width], attr)
+                    else:
+                        self.stdscr.addstr(y, content_x, line[:content_width])
+                        
+            except curses.error:
+                pass
+            
+            # Indicador de scroll
+            if len(self.content_lines) > max_lines:
+                scroll_percent = self.scroll_offset / max(1, len(self.content_lines) - max_lines)
+                scroll_pos = int(scroll_percent * (max_lines - 3))
                 try:
-                    client.send(f"NEW_MSG|{remetente_id}|{mensagem}".encode('utf-8'))
+                    self.stdscr.addstr(start_y + scroll_pos, w-2, '█')
                 except:
                     pass
-    
-    def conectar_como_cliente():
-        """Conecta como cliente ao servidor"""
-        try:
-            server_host = input("Digite o IP do servidor (ou Enter para localhost): ").strip()
-            if not server_host:
-                server_host = 'localhost'
-            
-            client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            client_socket.connect((server_host, PORT))
-            
-            # Login
-            usuarios = carregar_usuarios()
-            
-            if not usuarios:
-                print("❌ Nenhum usuário cadastrado localmente!")
+        
+        def draw_elements_menu(self):
+            h, w = self.stdscr.getmaxyx()
+            if w < 80 or not self.elements:
                 return
-            
-            print("\n📋 Seus usuários locais:")
-            for id_user, nome in usuarios.items():
-                print(f"   ID: {id_user} - Nome: {nome}")
+                
+            menu_x = w - 44
+            menu_y = 3
+            menu_width = 43
             
             try:
-                user_id = int(input("\nDigite seu ID: "))
-                if user_id not in usuarios:
-                    print("❌ ID não encontrado!")
-                    return
-            except ValueError:
-                print("❌ ID inválido!")
+                # Cabeçalho do menu
+                if self.has_colors:
+                    self.stdscr.addstr(menu_y-1, menu_x, "┌" + "─" * (menu_width-2) + "┐", self.get_color_pair(2))
+                    self.stdscr.addstr(menu_y, menu_x, "│ 📋 ELEMENTOS " + " " * (menu_width-16) + "│", self.get_color_pair(1))
+                    self.stdscr.addstr(menu_y+1, menu_x, "├" + "─" * (menu_width-2) + "┤", self.get_color_pair(2))
+                else:
+                    self.stdscr.addstr(menu_y-1, menu_x, "+" + "-" * (menu_width-2) + "+")
+                    self.stdscr.addstr(menu_y, menu_x, "| ELEMENTOS " + " " * (menu_width-13) + "|")
+                    self.stdscr.addstr(menu_y+1, menu_x, "+" + "-" * (menu_width-2) + "+")
+                
+                # Lista de elementos
+                visible_elements = self.elements[:h-10]
+                for i, element in enumerate(visible_elements):
+                    y = menu_y + 2 + i
+                    if y >= h-3:
+                        break
+                    
+                    if element['type'] == 'link':
+                        icon = '🔗'
+                        color = self.get_color_pair(7)
+                    elif element['type'] == 'button':
+                        icon = '🖱️'
+                        color = self.get_color_pair(8)
+                    elif element['type'] == 'input':
+                        icon = '📝'
+                        color = self.get_color_pair(3)
+                    elif element['type'] == 'image':
+                        icon = '🖼️'
+                        color = self.get_color_pair(4)
+                    else:
+                        icon = '•'
+                        color = 0
+                    
+                    if i == self.selected_element:
+                        prefix = '▶ '
+                        attr = self.get_color_pair(5) | curses.A_BOLD if self.has_colors else curses.A_REVERSE
+                    else:
+                        prefix = '  '
+                        attr = color if self.has_colors else 0
+                    
+                    text = f"{prefix}{icon} {element['text'][:35]}"
+                    self.stdscr.addstr(y, menu_x + 2, text[:menu_width-4], attr)
+                
+                # Rodapé do menu
+                footer_y = menu_y + 2 + len(visible_elements)
+                if footer_y < h-2:
+                    if self.has_colors:
+                        self.stdscr.addstr(footer_y, menu_x, "└" + "─" * (menu_width-2) + "┘", self.get_color_pair(2))
+                    else:
+                        self.stdscr.addstr(footer_y, menu_x, "+" + "-" * (menu_width-2) + "+")
+                        
+            except curses.error:
+                pass
+        
+        def draw_footer(self):
+            h, w = self.stdscr.getmaxyx()
+            if h < 5:
                 return
             
-            # Enviar dados de login
-            login_data = f"{user_id}|{usuarios[user_id]}"
-            client_socket.send(login_data.encode('utf-8'))
+            # Status
+            if self.status_message and self.status_timer > 0:
+                try:
+                    status_color = self.get_color_pair(4) if self.status_is_error else self.get_color_pair(3)
+                    self.stdscr.addstr(h-3, 1, f" {self.status_message} "[:w-3], status_color | curses.A_BOLD)
+                except:
+                    pass
             
-            # Aguardar confirmação
-            response = client_socket.recv(1024).decode('utf-8')
-            if response == "CONNECTED":
-                print(f"✅ Conectado como {usuarios[user_id]}!")
-                menu_cliente(client_socket, user_id, usuarios[user_id])
-            else:
-                print("❌ Falha na conexão!")
+            # Comandos
+            footer = " [Q]Sair [U]URL [↑↓]Rolar [Tab]Sel [Enter]Abrir [M]Mouse [R]Recarregar"
+            if self.mouse.enabled:
+                footer += f" [X:{self.mouse.x} Y:{self.mouse.y}]"
+            
+            try:
+                if self.has_colors:
+                    self.stdscr.addstr(h-2, 0, "─" * (w-1), self.get_color_pair(2))
+                    self.stdscr.addstr(h-1, 0, footer[:w-1], self.get_color_pair(3))
+                else:
+                    self.stdscr.addstr(h-2, 0, "-" * (w-1))
+                    self.stdscr.addstr(h-1, 0, footer[:w-1])
+            except:
+                pass
+        
+        def draw_mouse_cursor(self):
+            if self.mouse.enabled:
+                try:
+                    h, w = self.stdscr.getmaxyx()
+                    if 0 <= self.mouse.x < w and 0 <= self.mouse.y < h:
+                        try:
+                            current_char = self.stdscr.inch(self.mouse.y, self.mouse.x) & 0xFF
+                            if current_char == ord(' '):
+                                cursor_char = '·'
+                            else:
+                                cursor_char = chr(current_char)
+                        except:
+                            cursor_char = '·'
+                        
+                        if self.has_colors:
+                            self.stdscr.addstr(self.mouse.y, self.mouse.x, cursor_char, 
+                                             self.get_color_pair(6) | curses.A_REVERSE)
+                        else:
+                            self.stdscr.addstr(self.mouse.y, self.mouse.x, cursor_char, 
+                                             curses.A_REVERSE)
+                except:
+                    pass
+        
+        def handle_mouse(self):
+            if not self.mouse.enabled:
+                return False
+            
+            try:
+                mouse_event = self.stdscr.getmouse()
+                if not mouse_event:
+                    return False
                 
-        except Exception as e:
-            print(f"❌ Erro ao conectar: {e}")
-    
-    def menu_cliente(client_socket, user_id, user_name):
-        """Menu do cliente conectado"""
-        while True:
-            print("\n" + "="*50)
-            print(f"🌟 CHAT - {user_name} (ID: {user_id})")
-            print("="*50)
-            print("1. Conversar com usuário")
-            print("2. Atualizar lista de usuários")
-            print("3. Sair")
-            
-            opcao = input("\nDigite sua opção: ").strip()
-            
-            if opcao == '1':
-                chat_usuario(client_socket, user_id, user_name)
-            elif opcao == '2':
-                listar_usuarios_online(client_socket)
-            elif opcao == '3':
-                print("👋 Saindo...")
-                break
-            else:
-                print("❌ Opção inválida!")
-    
-    def listar_usuarios_online(client_socket):
-        """Lista usuários online no servidor"""
-        try:
-            client_socket.send("LIST_USERS".encode('utf-8'))
-            data = client_socket.recv(4096).decode('utf-8')
-            usuarios = json.loads(data)
-            
-            print("\n📋 Usuários disponíveis:")
-            for id_user, nome in usuarios.items():
-                print(f"   ID: {id_user} - Nome: {nome}")
+                id, x, y, z, bstate = mouse_event
                 
-        except Exception as e:
-            print(f"❌ Erro ao listar usuários: {e}")
-    
-    def chat_usuario(client_socket, user_id, user_name):
-        """Interface de chat com outro usuário"""
-        try:
-            destinatario_id = int(input("\nDigite o ID do usuário para conversar: "))
+                self.mouse.x = x
+                self.mouse.y = y
+                
+                if bstate & curses.BUTTON1_CLICKED or bstate & curses.BUTTON1_PRESSED:
+                    self.mouse.click(x, y)
+                    self.check_mouse_click(x, y)
+                else:
+                    self.mouse.release()
+                
+                if bstate & curses.BUTTON4_PRESSED:
+                    self.scroll_offset = max(0, self.scroll_offset - 3)
+                if bstate & curses.BUTTON5_PRESSED:
+                    self.scroll_offset += 3
+                
+                return True
+                
+            except curses.error:
+                return False
+            except Exception:
+                return False
+        
+        def check_mouse_click(self, x, y):
+            h, w = self.stdscr.getmaxyx()
+            menu_x = w - 44
             
-            print(f"\n💬 Conversando... (Digite '/quit' para sair)")
-            print("-" * 50)
+            # Clique no menu
+            if menu_x <= x < w:
+                element_index = y - 5
+                if 0 <= element_index < len(self.elements):
+                    self.selected_element = element_index
+                    self.activate_element(self.elements[element_index])
+                    return
             
-            # Thread para receber mensagens em tempo real
-            recebendo = True
-            
-            def receber_mensagens():
-                while recebendo:
-                    try:
-                        client_socket.settimeout(1.0)
-                        data = client_socket.recv(1024).decode('utf-8')
-                        if data.startswith("NEW_MSG|"):
-                            partes = data.split('|')
-                            remetente_id = int(partes[1])
-                            mensagem = partes[2]
-                            print(f"\n💬 Nova mensagem de {remetente_id}: {mensagem}")
-                            print("Digite sua mensagem: ", end="")
-                    except socket.timeout:
-                        continue
-                    except:
+            # Clique no conteúdo
+            content_y = y - 3
+            if content_y >= 0:
+                absolute_y = self.scroll_offset + content_y
+                for i, elem in enumerate(self.elements):
+                    if elem.get('y_pos') == absolute_y:
+                        self.selected_element = i
+                        self.activate_element(elem)
                         break
+        
+        def activate_element(self, element):
+            try:
+                if element['type'] == 'link':
+                    href = element['href']
+                    if href and not href.startswith('javascript:'):
+                        full_url = urljoin(self.base_url, href)
+                        self.fetch_url(full_url)
+                    else:
+                        self.set_status("Link sem destino válido")
+                
+                elif element['type'] == 'button':
+                    self.set_status(f"✓ Botão clicado: {element['text']}")
+                    self.needs_render = True
+                
+                elif element['type'] == 'input':
+                    self.input_mode = True
+                    self.input_element = element
+                    self.input_text = element.get('value', '')
+                    self.input_field_index = self.elements.index(element)
+                    self.set_status("✏️ Digite e pressione ENTER (ESC cancela)")
+                
+                elif element['type'] == 'image':
+                    src = element['src']
+                    if src and not src.startswith('data:'):
+                        full_url = urljoin(self.base_url, src)
+                        self.set_status(f"Carregando imagem...")
+                        ascii_img = self.url_to_ascii(full_url)
+                        if ascii_img:
+                            self.content_lines = ascii_img.split('\n')
+                            self.set_status("✓ Imagem convertida para ASCII")
+                        else:
+                            self.set_status("✗ Falha ao carregar imagem", True)
+                            
+            except Exception as e:
+                self.set_status(f"Erro: {str(e)[:30]}", True)
+        
+        def url_to_ascii(self, url):
+            try:
+                response = requests.get(url, stream=True, timeout=5)
+                img = Image.open(io.BytesIO(response.content))
+                
+                if img.mode != 'L':
+                    img = img.convert('L')
+                
+                h, w = self.stdscr.getmaxyx()
+                max_width = w - 45 if w >= 80 else w - 2
+                aspect = img.height / img.width
+                new_width = min(max_width, 60)
+                new_height = int(new_width * aspect * 0.5)
+                img = img.resize((new_width, new_height))
+                
+                chars = [' ', '.', ',', ':', ';', '+', '*', '#', '%', '@']
+                art = []
+                
+                for y in range(new_height):
+                    line = ''
+                    for x in range(new_width):
+                        pixel = img.getpixel((x, y))
+                        idx = pixel // 25
+                        line += chars[min(idx, 9)]
+                    art.append(line)
+                
+                return '\n'.join(art)
+                
+            except Exception:
+                return None
+        
+        def handle_input(self, key):
+            if key == 27:
+                self.input_mode = False
+                self.input_text = ""
+                self.input_element = None
+                self.input_field_index = -1
+                self.set_status("✖ Input cancelado")
+                
+            elif key == ord('\n') or key == ord('\r'):
+                if self.input_element:
+                    self.input_element['value'] = self.input_text
+                    
+                    if self.input_field_index >= 0:
+                        self.elements[self.input_field_index]['value'] = self.input_text
+                        self.elements[self.input_field_index]['text'] = f"[{self.input_element['input_type']}] {self.input_text or self.input_element['placeholder']}"
+                    
+                    self.set_status(f"✓ Input: {self.input_text[:30]}")
+                    
+                self.input_mode = False
+                self.input_text = ""
+                self.input_element = None
+                self.input_field_index = -1
+                self.needs_render = True
+                
+            elif key == curses.KEY_BACKSPACE or key == 127 or key == 8:
+                self.input_text = self.input_text[:-1]
+                
+            elif 32 <= key <= 126:
+                self.input_text += chr(key)
+        
+        def run(self):
+            self.init_curses()
+            self.fetch_url("example.com")
             
-            receiver_thread = threading.Thread(target=receber_mensagens)
-            receiver_thread.daemon = True
-            receiver_thread.start()
-            
-            # Carregar histórico
-            client_socket.send(f"GET_MSGS|{destinatario_id}".encode('utf-8'))
-            historico_data = client_socket.recv(4096).decode('utf-8')
-            historico = json.loads(historico_data)
-            
-            for msg in historico:
-                timestamp = msg['timestamp']
-                remetente = msg['remetente']
-                print(f"[{timestamp}] {remetente}: {msg['mensagem']}")
-            
-            # Loop de envio de mensagens
             while True:
-                mensagem = input("Você: ").strip()
-                
-                if mensagem.lower() == '/quit':
-                    recebendo = False
+                try:
+                    if self.needs_render and self.parsed_content:
+                        self.render_to_lines()
+                        self.needs_render = False
+                    
+                    self.stdscr.clear()
+                    self.draw_header()
+                    self.draw_content()
+                    self.draw_elements_menu()
+                    self.draw_footer()
+                    self.draw_mouse_cursor()
+                    self.stdscr.refresh()
+                    
+                    if self.status_timer > 0:
+                        self.status_timer -= 1
+                    else:
+                        self.status_message = ""
+                    
+                    key = self.stdscr.getch()
+                    
+                    if key == curses.KEY_MOUSE:
+                        self.handle_mouse()
+                        continue
+                    
+                    if key == ord('q'):
+                        break
+                    
+                    elif key == ord('u'):
+                        self.cleanup_curses()
+                        try:
+                            url = input("\nDigite a URL: ").strip()
+                        except:
+                            url = ""
+                        self.init_curses()
+                        if url:
+                            self.fetch_url(url)
+                    
+                    elif key == ord('m'):
+                        self.mouse.enabled = not self.mouse.enabled
+                        if self.mouse.enabled:
+                            try:
+                                curses.mousemask(curses.ALL_MOUSE_EVENTS | curses.REPORT_MOUSE_POSITION)
+                                self.set_status("✓ Mouse ativado")
+                            except:
+                                self.mouse.enabled = False
+                                self.set_status("✗ Mouse não suportado", True)
+                        else:
+                            self.set_status("✗ Mouse desativado")
+                    
+                    elif key == ord('\t'):
+                        if self.elements:
+                            self.selected_element = (self.selected_element + 1) % len(self.elements)
+                            self.set_status(f"Elemento {self.selected_element + 1} selecionado")
+                    
+                    elif key == curses.KEY_UP:
+                        self.scroll_offset = max(0, self.scroll_offset - 1)
+                        if self.elements and not self.input_mode:
+                            self.selected_element = (self.selected_element - 1) % len(self.elements)
+                    
+                    elif key == curses.KEY_DOWN:
+                        self.scroll_offset += 1
+                        if self.elements and not self.input_mode:
+                            self.selected_element = (self.selected_element + 1) % len(self.elements)
+                    
+                    elif key == curses.KEY_PPAGE:
+                        self.scroll_offset = max(0, self.scroll_offset - 20)
+                    
+                    elif key == curses.KEY_NPAGE:
+                        self.scroll_offset += 20
+                    
+                    elif key == curses.KEY_LEFT:
+                        if self.history_index > 0:
+                            self.history_index -= 1
+                            self.fetch_url(self.history[self.history_index])
+                    
+                    elif key == curses.KEY_RIGHT:
+                        if self.history_index < len(self.history) - 1:
+                            self.history_index += 1
+                            self.fetch_url(self.history[self.history_index])
+                    
+                    elif key == ord('r') or key == ord('R'):
+                        if self.current_url:
+                            self.fetch_url(self.current_url)
+                    
+                    elif key == ord('\n') or key == ord('\r'):
+                        if self.elements and self.selected_element < len(self.elements) and not self.input_mode:
+                            self.activate_element(self.elements[self.selected_element])
+                    
+                    elif self.input_mode:
+                        self.handle_input(key)
+                    
+                    max_scroll = max(0, len(self.content_lines) - (self.stdscr.getmaxyx()[0] - 5))
+                    self.scroll_offset = max(0, min(self.scroll_offset, max_scroll))
+                    
+                except KeyboardInterrupt:
                     break
-                elif mensagem:
-                    client_socket.send(f"SEND_MSG|{destinatario_id}|{mensagem}".encode('utf-8'))
-                    response = client_socket.recv(1024).decode('utf-8')
-                    if response == "MSG_SENT":
-                        print("✅ Mensagem enviada!")
-                
-        except Exception as e:
-            print(f"❌ Erro no chat: {e}")
+                except Exception as e:
+                    self.set_status(f"Erro: {str(e)[:30]}", True)
+            
+            self.cleanup_curses()
     
-    def criar_usuario_local():
-        """Cria um novo usuário local"""
-        nome = input("Digite seu nome: ").strip()
-        if not nome:
-            print("Nome não pode estar vazio!")
-            return
+    browser = TUIBrowser()
+    browser.run()
+
+
+def taskmgr():
+    """
+    Abre um gerenciador de tarefas com menu para Linux
+    """
+    import subprocess
+    import os
+    import signal
+    import time
+    
+    class GerenciadorTarefasLinux:
+        def __init__(self):
+            self.executando = True
         
-        usuarios = carregar_usuarios()
+        def _executar_comando(self, comando):
+            """Executa comando Linux e retorna resultado"""
+            try:
+                resultado = subprocess.run(
+                    comando,
+                    shell=True,
+                    capture_output=True,
+                    text=True,
+                    encoding='utf-8',
+                    errors='ignore'
+                )
+                if resultado.returncode == 0:
+                    return resultado.stdout.strip()
+                else:
+                    return f"Erro: {resultado.stderr.strip()}"
+            except Exception as e:
+                return f"Erro: {str(e)}"
         
-        # Gerar ID único
+        def limpar_tela(self):
+            """Limpa a tela do terminal"""
+            os.system('clear')
+        
+        def mostrar_cabecalho(self):
+            """Mostra cabeçalho do menu"""
+            print("╔════════════════════════════════════════════╗")
+            print("║     GERENCIADOR DE TAREFAS - LINUX        ║")
+            print("╚════════════════════════════════════════════╝")
+        
+        def mostrar_menu(self):
+            """Mostra o menu principal"""
+            print("\n=== MENU PRINCIPAL ===")
+            print("1. Listar todos os processos")
+            print("2. Ver top processos (CPU)")
+            print("3. Ver top processos (Memória)")
+            print("4. Buscar processo por nome")
+            print("5. Matar processo por PID")
+            print("6. Matar processo por nome")
+            print("7. Ver informações do sistema")
+            print("8. Ver árvore de processos")
+            print("9. Ver processos por usuário")
+            print("10. Encontrar processo por porta")
+            print("11. Iniciar novo processo")
+            print("0. Sair")
+            print("=" * 40)
+        
+        def listar_processos(self):
+            """Lista todos os processos usando ps"""
+            self.limpar_tela()
+            self.mostrar_cabecalho()
+            print("\n=== LISTA DE PROCESSOS ===")
+            print("Mostrando os 20 processos mais ativos...\n")
+            
+            # Executa ps aux ordenado por CPU
+            saida = self._executar_comando('ps aux --sort=-%cpu | head -30')
+            
+            if saida.startswith('Erro'):
+                print("Erro ao listar processos!")
+                input("\nPressione Enter para continuar...")
+                return
+            
+            # Mostra a saída formatada
+            linhas = saida.split('\n')
+            
+            if len(linhas) > 0:
+                # Cabeçalho
+                cabecalho = linhas[0]
+                print(cabecalho)
+                print("-" * min(100, len(cabecalho) + 20))
+                
+                # Dados
+                for linha in linhas[1:]:
+                    if linha.strip():
+                        # Formata a linha para melhor visualização
+                        partes = linha.split(None, 10)  # Divide em no máximo 11 partes
+                        if len(partes) >= 11:
+                            usuario = partes[0][:10].ljust(10)
+                            pid = partes[1].rjust(6)
+                            cpu = partes[2].rjust(6)
+                            mem = partes[3].rjust(6)
+                            comando = partes[10][:50] + "..." if len(partes[10]) > 50 else partes[10]
+                            print(f"{usuario} {pid} {cpu}% {mem}% {comando}")
+                        else:
+                            print(linha[:100])  # Mostra até 100 caracteres
+            else:
+                print("Nenhum processo encontrado!")
+            
+            print(f"\nTotal de processos mostrados: {len(linhas) - 1 if len(linhas) > 1 else 0}")
+            
+            input("\nPressione Enter para voltar ao menu...")
+        
+        def top_cpu(self):
+            """Mostra top processos por CPU"""
+            self.limpar_tela()
+            self.mostrar_cabecalho()
+            print("\n=== TOP PROCESSOS - CPU ===")
+            print("Processos que mais usam CPU:\n")
+            
+            saida = self._executar_comando('ps aux --sort=-%cpu | head -20')
+            
+            if saida.startswith('Erro'):
+                print("Erro ao obter processos!")
+            else:
+                print(saida)
+            
+            input("\nPressione Enter para continuar...")
+        
+        def top_memoria(self):
+            """Mostra top processos por memória"""
+            self.limpar_tela()
+            self.mostrar_cabecalho()
+            print("\n=== TOP PROCESSOS - MEMÓRIA ===")
+            print("Processos que mais usam memória:\n")
+            
+            saida = self._executar_comando('ps aux --sort=-%mem | head -20')
+            
+            if saida.startswith('Erro'):
+                print("Erro ao obter processos!")
+            else:
+                print(saida)
+            
+            input("\nPressione Enter para continuar...")
+        
+        def buscar_por_nome(self):
+            """Busca processos por nome"""
+            self.limpar_tela()
+            self.mostrar_cabecalho()
+            print("\n=== BUSCAR PROCESSO POR NOME ===")
+            
+            nome = input("Digite parte do nome do processo: ").strip()
+            if not nome:
+                print("Nome não pode ser vazio!")
+                input("\nPressione Enter para continuar...")
+                return
+            
+            print(f"\nBuscando processos com '{nome}'...\n")
+            saida = self._executar_comando(f'ps aux | grep -i "{nome}" | grep -v grep | head -30')
+            
+            if saida and not saida.startswith('Erro'):
+                print(f"Processos encontrados com '{nome}':")
+                print("-" * 60)
+                print(saida)
+            else:
+                print(f"Nenhum processo encontrado com '{nome}'")
+            
+            input("\nPressione Enter para continuar...")
+        
+        def matar_por_pid(self):
+            """Mata processo por PID"""
+            self.limpar_tela()
+            self.mostrar_cabecalho()
+            print("\n=== MATAR PROCESSO POR PID ===")
+            
+            try:
+                pid = input("Digite o PID do processo: ").strip()
+                if not pid.isdigit():
+                    print("PID deve ser um número!")
+                    input("\nPressione Enter para continuar...")
+                    return
+                
+                pid_int = int(pid)
+                
+                # Primeiro mostra informações do processo
+                print(f"\nObtendo informações do processo {pid_int}...")
+                info = self._executar_comando(f'ps -p {pid_int} -o pid,user,%cpu,%mem,command 2>/dev/null')
+                
+                if not info or 'PID' not in info:
+                    print(f"Processo com PID {pid_int} não encontrado!")
+                    input("\nPressione Enter para continuar...")
+                    return
+                
+                print(f"\nProcesso encontrado:")
+                print(info)
+                
+                confirmar = input(f"\nTem certeza que deseja matar o processo {pid_int}? (s/N): ").strip().lower()
+                
+                if confirmar == 's':
+                    print(f"\nEncerrando processo {pid_int}...")
+                    
+                    # Tenta SIGTERM primeiro (terminação graciosa)
+                    try:
+                        os.kill(pid_int, signal.SIGTERM)
+                        time.sleep(1)
+                        
+                        # Verifica se processo ainda existe
+                        verifica = self._executar_comando(f'ps -p {pid_int} 2>/dev/null')
+                        if verifica and str(pid_int) in verifica:
+                            # Se ainda existe, força com SIGKILL
+                            os.kill(pid_int, signal.SIGKILL)
+                            time.sleep(0.5)
+                            print(f"Processo {pid_int} forçado a terminar (SIGKILL)")
+                        else:
+                            print(f"Processo {pid_int} terminado graciosamente (SIGTERM)")
+                    
+                    except ProcessLookupError:
+                        print(f"Processo {pid_int} não encontrado (já foi encerrado)")
+                    except PermissionError:
+                        print(f"Permissão negada para encerrar processo {pid_int}!")
+                        print("Tente executar este programa com sudo.")
+                    except Exception as e:
+                        print(f"Erro ao encerrar processo: {e}")
+                else:
+                    print("Operação cancelada!")
+            
+            except ValueError:
+                print("PID inválido!")
+            except Exception as e:
+                print(f"Erro: {str(e)}")
+            
+            input("\nPressione Enter para continuar...")
+        
+        def matar_por_nome(self):
+            """Mata processos por nome"""
+            self.limpar_tela()
+            self.mostrar_cabecalho()
+            print("\n=== MATAR PROCESSOS POR NOME ===")
+            
+            nome = input("Digite parte do nome do processo: ").strip()
+            if not nome:
+                print("Nome não pode ser vazio!")
+                input("\nPressione Enter para continuar...")
+                return
+            
+            # Primeiro mostra os processos
+            print(f"\nBuscando processos com '{nome}'...")
+            saida = self._executar_comando(f'ps aux | grep -i "{nome}" | grep -v grep | head -20')
+            
+            if not saida or saida.startswith('Erro'):
+                print(f"Nenhum processo encontrado com '{nome}'")
+                input("\nPressione Enter para continuar...")
+                return
+            
+            print(f"\nProcessos encontrados com '{nome}':")
+            print("-" * 80)
+            print(saida)
+            print("-" * 80)
+            
+            confirmar = input(f"\nTem certeza que deseja matar TODOS estes processos? (s/N): ").strip().lower()
+            
+            if confirmar == 's':
+                # Extrai PIDs
+                linhas = saida.split('\n')
+                pids_mortos = []
+                
+                for linha in linhas:
+                    if linha.strip():
+                        partes = linha.split(None, 10)
+                        if len(partes) >= 2 and partes[1].isdigit():
+                            pid = int(partes[1])
+                            try:
+                                # Tenta SIGTERM primeiro
+                                os.kill(pid, signal.SIGTERM)
+                                time.sleep(0.1)
+                                
+                                # Se ainda existe, força com SIGKILL
+                                if self._executar_comando(f'ps -p {pid} 2>/dev/null'):
+                                    os.kill(pid, signal.SIGKILL)
+                                
+                                pids_mortos.append(pid)
+                                print(f"✓ Processo {pid} ({partes[10][:30]}...) encerrado")
+                            except ProcessLookupError:
+                                print(f"✗ Processo {pid} já estava encerrado")
+                            except PermissionError:
+                                print(f"✗ Permissão negada para processo {pid}")
+                            except Exception:
+                                print(f"✗ Erro ao encerrar processo {pid}")
+                
+                print(f"\nTotal de processos mortos: {len(pids_mortos)}")
+            else:
+                print("Operação cancelada!")
+            
+            input("\nPressione Enter para continuar...")
+        
+        def info_sistema(self):
+            """Mostra informações do sistema"""
+            self.limpar_tela()
+            self.mostrar_cabecalho()
+            print("\n=== INFORMAÇÕES DO SISTEMA ===")
+            
+            # Memória
+            print("\n--- MEMÓRIA ---")
+            memoria = self._executar_comando('free -h')
+            if memoria and not memoria.startswith('Erro'):
+                print(memoria)
+            else:
+                print("Não foi possível obter informações de memória")
+            
+            # CPU - Corrigindo a string com escape
+            print("\n--- CPU ---")
+            # Usando regex sem o escape problemático
+            cpu_info = self._executar_comando('lscpu | grep -E "Model name|CPU.s.|CPU MHz" | head -3')
+            if cpu_info and not cpu_info.startswith('Erro'):
+                print(cpu_info)
+            else:
+                # Tenta alternativa
+                cpu_alt = self._executar_comando('cat /proc/cpuinfo | grep -E "model name|cpu cores" | head -3')
+                if cpu_alt:
+                    print(cpu_alt)
+                else:
+                    print("Não foi possível obter informações da CPU")
+            
+            # Uptime
+            print("\n--- UPTIME ---")
+            uptime = self._executar_comando('uptime')
+            if uptime and not uptime.startswith('Erro'):
+                print(uptime)
+            else:
+                print("Não foi possível obter uptime")
+            
+            # Load average
+            print("\n--- LOAD AVERAGE ---")
+            load = self._executar_comando('cat /proc/loadavg')
+            if load and not load.startswith('Erro'):
+                print(f"Load average: {load}")
+            
+            # Disco
+            print("\n--- USO DE DISCO ---")
+            disco = self._executar_comando('df -h / | tail -1')
+            if disco and not disco.startswith('Erro'):
+                print(f"Disco raiz (/): {disco}")
+            
+            # Processos
+            print("\n--- RESUMO DE PROCESSOS ---")
+            proc_count = self._executar_comando('ps aux | wc -l')
+            if proc_count and proc_count.isdigit():
+                print(f"Processos em execução: {int(proc_count) - 1}")
+            
+            input("\nPressione Enter para continuar...")
+        
+        def arvore_processos(self):
+            """Mostra árvore de processos"""
+            self.limpar_tela()
+            self.mostrar_cabecalho()
+            print("\n=== ÁRVORE DE PROCESSOS ===")
+            print("Mostrando hierarquia de processos...\n")
+            
+            # Tenta pstree, se não existir, usa ps com formato de árvore
+            arvore = self._executar_comando('which pstree && pstree -p || ps auxf --forest')
+            
+            if arvore and not arvore.startswith('Erro'):
+                # Limita a saída para não sobrecarregar o terminal
+                linhas = arvore.split('\n')
+                for linha in linhas[:40]:  # Mostra apenas as primeiras 40 linhas
+                    print(linha)
+                
+                if len(linhas) > 40:
+                    print(f"\n... e mais {len(linhas) - 40} linhas (saída truncada)")
+            else:
+                print("Não foi possível obter a árvore de processos")
+            
+            input("\nPressione Enter para continuar...")
+        
+        def processos_usuario(self):
+            """Mostra processos de um usuário"""
+            self.limpar_tela()
+            self.mostrar_cabecalho()
+            print("\n=== PROCESSOS POR USUÁRIO ===")
+            
+            usuario_atual = os.getlogin()
+            usuario = input(f"Digite o nome do usuário (deixe vazio para '{usuario_atual}'): ").strip()
+            if not usuario:
+                usuario = usuario_atual
+            
+            print(f"\nProcessos do usuário '{usuario}':\n")
+            processos = self._executar_comando(f'ps -u {usuario} -o pid,%cpu,%mem,command --sort=-%cpu | head -30')
+            
+            if processos and not processos.startswith('Erro'):
+                print(processos)
+            else:
+                print(f"Não foi possível obter processos do usuário '{usuario}'")
+                print("Ou o usuário não existe ou não tem processos em execução.")
+            
+            input("\nPressione Enter para continuar...")
+        
+        def processo_por_porta(self):
+            """Encontra processo por porta"""
+            self.limpar_tela()
+            self.mostrar_cabecalho()
+            print("\n=== PROCESSO POR PORTA ===")
+            
+            porta = input("Digite o número da porta: ").strip()
+            if not porta.isdigit():
+                print("Porta deve ser um número!")
+                input("\nPressione Enter para continuar...")
+                return
+            
+            print(f"\nBuscando processo usando porta {porta}...\n")
+            processo = self._executar_comando(f'sudo lsof -i :{porta} 2>/dev/null || lsof -i :{porta} 2>/dev/null')
+            
+            if processo and not processo.startswith('Erro'):
+                print(f"Processo(s) usando porta {porta}:")
+                print(processo)
+            else:
+                print(f"Nenhum processo usando porta {porta}")
+                print("Ou você não tem permissão para ver (tente executar com sudo)")
+            
+            input("\nPressione Enter para continuar...")
+        
+        def iniciar_processo(self):
+            """Inicia um novo processo"""
+            self.limpar_tela()
+            self.mostrar_cabecalho()
+            print("\n=== INICIAR NOVO PROCESSO ===")
+            
+            comando = input("Digite o comando para executar: ").strip()
+            if not comando:
+                print("Comando não pode ser vazio!")
+                input("\nPressione Enter para continuar...")
+                return
+            
+            background = input("Executar em background? (s/N): ").strip().lower() == 's'
+            
+            try:
+                if background:
+                    print(f"\nExecutando em background: {comando}")
+                    processo = subprocess.Popen(
+                        comando,
+                        shell=True,
+                        stdout=subprocess.DEVNULL,
+                        stderr=subprocess.DEVNULL,
+                        start_new_session=True
+                    )
+                    print(f"✓ Processo iniciado em background")
+                    print(f"  PID: {processo.pid}")
+                    print(f"  Comando: {comando[:50]}{'...' if len(comando) > 50 else ''}")
+                else:
+                    print(f"\nExecutando: {comando}")
+                    print("-" * 60)
+                    
+                    # Executa e captura saída em tempo real
+                    processo = subprocess.Popen(
+                        comando,
+                        shell=True,
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.STDOUT,
+                        text=True,
+                        bufsize=1,
+                        universal_newlines=True
+                    )
+                    
+                    # Mostra saída em tempo real
+                    for linha in processo.stdout:
+                        print(linha.rstrip())
+                    
+                    processo.wait()
+                    print("-" * 60)
+                    print(f"\n✓ Processo finalizado")
+                    print(f"  Código de saída: {processo.returncode}")
+            
+            except KeyboardInterrupt:
+                print("\n\n✗ Processo interrompido pelo usuário")
+            except FileNotFoundError:
+                print(f"\n✗ Comando não encontrado: {comando}")
+            except Exception as e:
+                print(f"\n✗ Erro: {str(e)}")
+            
+            input("\nPressione Enter para continuar...")
+        
+        def executar(self):
+            """Loop principal do gerenciador"""
+            while self.executando:
+                self.limpar_tela()
+                self.mostrar_cabecalho()
+                self.mostrar_menu()
+                
+                try:
+                    opcao = input("\nEscolha uma opção: ").strip()
+                    
+                    if opcao == '0':
+                        print("\nSaindo do gerenciador de tarefas...")
+                        time.sleep(1)
+                        self.executando = False
+                    
+                    elif opcao == '1':
+                        self.listar_processos()
+                    
+                    elif opcao == '2':
+                        self.top_cpu()
+                    
+                    elif opcao == '3':
+                        self.top_memoria()
+                    
+                    elif opcao == '4':
+                        self.buscar_por_nome()
+                    
+                    elif opcao == '5':
+                        self.matar_por_pid()
+                    
+                    elif opcao == '6':
+                        self.matar_por_nome()
+                    
+                    elif opcao == '7':
+                        self.info_sistema()
+                    
+                    elif opcao == '8':
+                        self.arvore_processos()
+                    
+                    elif opcao == '9':
+                        self.processos_usuario()
+                    
+                    elif opcao == '10':
+                        self.processo_por_porta()
+                    
+                    elif opcao == '11':
+                        self.iniciar_processo()
+                    
+                    else:
+                        print("Opção inválida! Pressione Enter para tentar novamente.")
+                        input()
+                
+                except KeyboardInterrupt:
+                    print("\n\nSaindo do gerenciador de tarefas...")
+                    time.sleep(1)
+                    self.executando = False
+                except Exception as e:
+                    print(f"\nErro inesperado: {e}")
+                    input("Pressione Enter para continuar...")
+    
+    # Cria e executa o gerenciador
+    gerenciador = GerenciadorTarefasLinux()
+    gerenciador.executar()
+
+
+
+
+def messages():
+    """
+    Abre um app de mensagens P2P para 2 pessoas com nomes de usuário
+    """
+    import socket
+    import threading
+    import time
+    import os
+    
+    # Configurações
+    HOST = '0.0.0.0'
+    PORT = 8888
+    
+    def limpar_tela():
+        os.system('cls' if os.name == 'nt' else 'clear')
+    
+    def exibir_chat(historico, meu_nome, outro_nome):
+        """Exibe a interface do chat"""
+        limpar_tela()
+        print("═" * 50)
+        print(f"💬 CHAT: {meu_nome} ↔ {outro_nome}")
+        print("═" * 50)
+        
+        if not historico:
+            print("\n✨ Comece a conversar! ✨")
+        
+        for remetente, mensagem, hora in historico:
+            if remetente == meu_nome:
+                print(f"\033[92m[{hora}] {meu_nome}: {mensagem}\033[0m")
+            else:
+                print(f"\033[96m[{hora}] {outro_nome}: {mensagem}\033[0m")
+        
+        print("─" * 50)
+        print("Digite sua mensagem ou '/sair' para encerrar")
+        print("═" * 50)
+    
+    def obter_nome_usuario():
+        """Obtém o nome do usuário"""
         while True:
-            id_user = gerar_id()
-            if id_user not in usuarios:
+            nome = input("Digite seu nome de usuário: ").strip()
+            if nome:
+                return nome
+            print("❌ Nome inválido. Tente novamente.")
+    
+    def servidor():
+        """Modo servidor - espera conexão"""
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        sock.bind((HOST, PORT))
+        sock.listen(1)
+        
+        limpar_tela()
+        print("═" * 50)
+        print("🕐 AGUARDANDO CONEXÃO...")
+        print(f"Endereço: {HOST}:{PORT}")
+        print("═" * 50)
+        
+        conn, addr = sock.accept()
+        
+        # Trocar nomes de usuário
+        meu_nome = obter_nome_usuario()
+        conn.send(meu_nome.encode('utf-8'))
+        outro_nome = conn.recv(1024).decode('utf-8')
+        
+        return conn, sock, meu_nome, outro_nome
+    
+    def cliente():
+        """Modo cliente - conecta ao servidor"""
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        
+        limpar_tela()
+        print("═" * 50)
+        print("🔗 CONECTANDO AO SERVIDOR...")
+        print("═" * 50)
+        
+        # Tentar conectar
+        tentativas = 0
+        while tentativas < 5:
+            try:
+                sock.connect((HOST, PORT))
+                break
+            except:
+                tentativas += 1
+                print(f"Tentativa {tentativas}/5...")
+                time.sleep(2)
+        else:
+            print("❌ Não foi possível conectar ao servidor")
+            return None, None, None, None
+        
+        # Trocar nomes de usuário
+        outro_nome = sock.recv(1024).decode('utf-8')
+        meu_nome = obter_nome_usuario()
+        sock.send(meu_nome.encode('utf-8'))
+        
+        return sock, None, meu_nome, outro_nome
+    
+    def chat(conn, sock_server, meu_nome, outro_nome):
+        """Loop principal do chat"""
+        from datetime import datetime
+        historico = []
+        
+        def receber_mensagens():
+            """Thread para receber mensagens"""
+            while True:
+                try:
+                    data = conn.recv(1024).decode('utf-8')
+                    if not data:
+                        break
+                    
+                    hora_atual = datetime.now().strftime("%H:%M:%S")
+                    
+                    if data == "/sair":
+                        historico.append((outro_nome, "🚪 Saiu do chat", hora_atual))
+                        exibir_chat(historico, meu_nome, outro_nome)
+                        break
+                    
+                    historico.append((outro_nome, data, hora_atual))
+                    exibir_chat(historico, meu_nome, outro_nome)
+                    
+                except:
+                    break
+        
+        # Iniciar thread de recebimento
+        recv_thread = threading.Thread(target=receber_mensagens, daemon=True)
+        recv_thread.start()
+        
+        # Mensagem de boas-vindas
+        hora_inicio = datetime.now().strftime("%H:%M:%S")
+        historico.append(("Sistema", f"✅ Chat iniciado às {hora_inicio}", hora_inicio))
+        
+        # Loop para enviar mensagens
+        while True:
+            exibir_chat(historico, meu_nome, outro_nome)
+            
+            try:
+                mensagem = input(f"{meu_nome}> ").strip()
+            except:
+                break
+            
+            if not mensagem:
+                continue
+                
+            if mensagem.lower() == '/sair':
+                hora_saida = datetime.now().strftime("%H:%M:%S")
+                historico.append((meu_nome, "🚪 Saindo do chat...", hora_saida))
+                conn.send("/sair".encode('utf-8'))
+                exibir_chat(historico, meu_nome, outro_nome)
+                time.sleep(2)
+                break
+            
+            hora_envio = datetime.now().strftime("%H:%M:%S")
+            historico.append((meu_nome, mensagem, hora_envio))
+            
+            try:
+                conn.send(mensagem.encode('utf-8'))
+            except:
+                historico.append(("Sistema", "❌ Erro ao enviar mensagem", hora_envio))
                 break
         
-        salvar_usuario(id_user, nome)
-        print(f"\n✅ Usuário criado com sucesso!")
-        print(f"📋 Seus dados:")
-        print(f"   ID: {id_user}")
-        print(f"   Nome: {nome}")
-        print("\n⚠️  Anote seu ID, você precisará dele para conectar!")
+        # Limpeza
+        conn.close()
+        if sock_server:
+            sock_server.close()
     
-    def menu_principal():
-        """Menu principal do app"""
-        inicializar_arquivos()
-        
-        while True:
-            print("\n" + "="*50)
-            print("🌟 APP DE MENSAGENS EM REDE")
-            print("="*50)
-            print("1. Iniciar como SERVIDOR (hospedar chat)")
-            print("2. Conectar como CLIENTE (entrar no chat)")
-            print("3. Criar usuário local")
-            print("4. Sair")
-            
-            opcao = input("\nDigite sua opção: ").strip()
+    # ============== INÍCIO DO APLICATIVO ==============
+    limpar_tela()
+    print("═" * 50)
+    print("💬 BEM-VINDO AO CHAT P2P")
+    print("═" * 50)
+    
+    # Escolher modo
+    print("\nEscolha o modo:")
+    print("1. Criar sala (Aguardar outra pessoa)")
+    print("2. Entrar em sala existente")
+    print("3. Sair")
+    
+    while True:
+        try:
+            opcao = input("\nOpção (1/2/3): ").strip()
             
             if opcao == '1':
-                print("\n🎯 Iniciando servidor...")
-                print("⚠️  Compartilhe seu IP para outros se conectarem")
-                iniciar_servidor()
+                conn, sock, meu_nome, outro_nome = servidor()
+                if conn:
+                    chat(conn, sock, meu_nome, outro_nome)
+                break
                 
             elif opcao == '2':
-                print("\n🔌 Conectando como cliente...")
-                conectar_como_cliente()
+                conn, sock, meu_nome, outro_nome = cliente()
+                if conn:
+                    chat(conn, sock, meu_nome, outro_nome)
+                break
                 
             elif opcao == '3':
-                criar_usuario_local()
-                
-            elif opcao == '4':
-                print("👋 Saindo do app...")
+                print("\nAté logo! 👋")
                 break
+                
             else:
-                print("❌ Opção inválida!")
-    
-    # Iniciar o app
-    menu_principal()
+                print("❌ Opção inválida. Escolha 1, 2 ou 3.")
+                
+        except KeyboardInterrupt:
+            print("\n\nChat interrompido pelo usuário.")
+            break
+        except Exception as e:
+            print(f"\n❌ Erro: {e}")
+            break
+
+
 
 def images():
 	sys.path.insert(0, "./pyOS/systemRes")
+	od = os.getcwd
 	import ascii_image_display as aid
 	print("1. ver fotos\n2. visualizar fotos\n0. sair")
 	escolha = input("escolha: ")
@@ -1972,11 +2530,13 @@ def images():
 		os.chdir("imgs/")
 		os.listdir()
 		os.chdir("..")
+		input("aperte enter para sair")
 	elif escolha == "2":
 		caminho = "imgs/"+ input("foto(apenas o arquivo nome com extensão): ")
 		aid.display_ascii_image(caminho)
 		input("aperte enter para sair")
 	elif escolha == "0":
+		os.chdir(od)
 		return
 
 		
@@ -1984,7 +2544,7 @@ def images():
 
 
 def sysmgr():
-	print(f"pyOS {version} - {os.getcwd()}")
+	print(f"pyOS {version} - {os.getcwd()} running as pid {os.getpid()}")
 	while True:
 		print("1. permissoes\n2. senha\n3. arquivos temp.\n4. processos\n0. sair\n")
 		esco = input("numero da opçao: ")
@@ -2036,6 +2596,7 @@ def sysmgr():
 
 
 def diagnosticar_rede():
+    from datetime import datetime
     """
     Função para diagnosticar problemas de rede e sugerir soluções
     """
@@ -2140,6 +2701,7 @@ def diagnosticar_rede():
         print("3. Verifique os cabos de rede")
         print("4. Desative e reative o adaptador de rede")
         print("5. Entre em contato com seu provedor de internet")
+        
 
     print(f"\n{Fore.CYAN}Diagnóstico concluído em: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}{Style.RESET_ALL}")
     input("pressione enter para sair")
@@ -2280,16 +2842,30 @@ def internet_control():
         except Exception as e:
             print(f"{Fore.RED}❌ Erro: {e}{Style.RESET_ALL}")
 			
-			
+
+def abrirapp_c(app):
+	env = os.environ.copy()
+	lpath = f"{os.getcwd()}/apps/{app}/lib"
+	if env.get("LD_LIBRARY_PATH", ""):
+		env["LD_LIBRARY_PATH"] += ":" + lpath
+	else:
+		env["LD_LIBRARY_PATH"] = lpath
+	
+		
+	subprocess.run([sys.executable, f"{os.getcwd()}/apps/{app}/main.py"], cwd=f"{os.getcwd()}/workspace/{app}", env=env)
 def abrirapp(app):
 	os.system("clear")
 	
 	try:
 		criar_barra(app)
-		apps[app]()
+		if callable(apps[app]):
+			apps[app]()
+		else:
+			abrirapp_c(app)
 	except KeyError:
 		print(Fore.RED + "app não encontrado")
 		time.sleep(3)
+	os.system("clear")
 
 
 
@@ -2494,9 +3070,19 @@ def agenda():
 
 def python3():
 	global pydir
+	if 'pydir' not in globals():
+		pydir = sys.executable
+	os.makedirs(".python3", exist_ok=True)
+	pypo = os.environ.get("PYTHONPATH")
+	os.environ["PYTHONPATH"] = os.path.join(os.getcwd(), ".python3")
+	if os.path.exists("./pydir.txt"):
+		with open("./pydir.txt, ", "r") as f:
+			pydir = f.read()
 	print("""1. ver versao do python
 2. abrir editor
 3. instalar biblioteca
+4. mudar diretorio do python
+5. visualizar diretorio do python
 0. sair
 """)
 	while True:
@@ -2506,16 +3092,22 @@ def python3():
 		elif esc == "2":
 			abrirEditor()
 		elif esc == "0":
+			os.environ["PYTHONPATH"] = pypo
 			break
 		elif esc == "3":
 			pacote = input("pacote: ")
-			res = subprocess.run(["pip", "install", pacote], shell=True, text=True)
+			res = subprocess.run(["pip", "install", pacote], text=True)
 			if res.stderr:
 				print("erro")
 			else:
 				print("pacote instalado com sucesso, reiniciando...")
 				os.execv(sys.executable, ['python3'] + sys.argv)
-
+		elif esc == "4":
+			pydir = input("novo dir: ")
+			with open("pydir.txt", "w") as f:
+				f.write(pydir)
+		elif esc == "5":
+			print(pydir)
 
 
 
@@ -2739,7 +3331,7 @@ def abrirEditor():
                 print(f"{'='*60}\n")
                 
                 # Executa com os.system - mantém stdin/stdout conectados ao terminal
-                comando = f'"{sys.executable}" "{temp_file}"'
+                comando = f'{pydir} -S "{temp_file}"'
                 return_code = os.system(comando)
                 
                 print(f"\n{'='*60}")
@@ -3212,504 +3804,7 @@ def audio():
             print("❌ Opção inválida!")
             time.sleep(1)
 
-def processos_sistema():
-    """
-    App para gerenciar processos do sistema operacional real
-    Versão corrigida para problemas de permissão no Linux
-    """
-    import os
-    import sys
-    import time
-    import platform
-    from datetime import datetime
-    
-    def verificar_psutil():
-        """Verifica se psutil está instalado, se não, instala"""
-        try:
-            import psutil
-            return True
-        except ImportError:
-            print("📦 Instalando psutil para gerenciamento de processos...")
-            try:
-                import subprocess
-                subprocess.check_call([sys.executable, "-m", "pip", "install", "psutil"])
-                print("✅ psutil instalado com sucesso!")
-                import psutil
-                return True
-            except Exception as e:
-                print(f"❌ Erro ao instalar psutil: {e}")
-                return False
-    
-    def obter_info_sistema_segura():
-        """Obtém informações do sistema de forma segura (com tratamento de permissões)"""
-        print("\n" + "="*60)
-        print("💻 INFORMAÇÕES DO SISTEMA")
-        print("="*60)
-        
-        # Informações básicas sempre disponíveis
-        print(f"Sistema: {platform.system()} {platform.release()}")
-        print(f"Arquitetura: {platform.machine()}")
-        
-        try:
-            import psutil
-            
-            # CPU (com fallback)
-            try:
-                cpu_percent = psutil.cpu_percent(interval=0.5)
-                cpu_count = psutil.cpu_count()
-                print(f"CPU: {cpu_percent}% de uso ({cpu_count} núcleos)")
-            except (PermissionError, FileNotFoundError) as e:
-                print(f"CPU: Informação limitada (permissão negada)")
-            
-            # Memória (geralmente funciona mesmo sem permissões elevadas)
-            try:
-                mem = psutil.virtual_memory()
-                mem_total_gb = mem.total / (1024**3)
-                mem_used_gb = mem.used / (1024**3)
-                mem_percent = mem.percent
-                print(f"RAM: {mem_used_gb:.1f}GB / {mem_total_gb:.1f}GB ({mem_percent}%)")
-            except:
-                print(f"RAM: Informação não disponível")
-            
-            # Disco
-            try:
-                disk = psutil.disk_usage('/')
-                disk_total_gb = disk.total / (1024**3)
-                disk_used_gb = disk.used / (1024**3)
-                disk_percent = disk.percent
-                print(f"Disco: {disk_used_gb:.1f}GB / {disk_total_gb:.1f}GB ({disk_percent}%)")
-            except:
-                print("Disco: Informação não disponível")
-            
-            # Boot
-            try:
-                boot_time = datetime.fromtimestamp(psutil.boot_time())
-                uptime = datetime.now() - boot_time
-                print(f"Tempo ligado: {uptime}")
-            except:
-                pass
-                
-        except ImportError:
-            print("⚠️  psutil não disponível - informações limitadas")
-        
-        print("="*60)
-    
-    def listar_processos_seguro(tipo="todos", limite=20):
-        """Lista processos de forma segura, tratando erros de permissão"""
-        processos = []
-        
-        try:
-            import psutil
-            
-            if tipo == "ativos":
-                # Processos ativos (com tratamento de erro)
-                for proc in psutil.process_iter(['pid', 'name', 'cpu_percent', 'memory_percent']):
-                    try:
-                        pinfo = proc.info
-                        # Usar get() para evitar KeyError
-                        cpu = pinfo.get('cpu_percent', 0)
-                        mem = pinfo.get('memory_percent', 0)
-                        if cpu > 0.1 or mem > 0.1:
-                            processos.append(pinfo)
-                    except (psutil.NoSuchProcess, psutil.AccessDenied, PermissionError):
-                        continue
-                    except Exception:
-                        continue
-            
-            elif tipo == "usuário":
-                # Processos do usuário atual
-                current_user = None
-                try:
-                    current_user = psutil.Process().username()
-                except:
-                    pass
-                
-                if current_user:
-                    for proc in psutil.process_iter(['pid', 'name', 'username', 'cpu_percent']):
-                        try:
-                            pinfo = proc.info
-                            if pinfo.get('username') == current_user:
-                                processos.append(pinfo)
-                        except:
-                            continue
-            
-            else:  # todos
-                # Todos os processos que conseguimos acessar
-                for proc in psutil.process_iter(['pid', 'name', 'cpu_percent', 'memory_percent']):
-                    try:
-                        processos.append(proc.info)
-                    except (psutil.NoSuchProcess, psutil.AccessDenied, PermissionError):
-                        continue
-                    except Exception:
-                        continue
-        
-        except ImportError:
-            print("❌ psutil não está disponível")
-            return []
-        except Exception as e:
-            print(f"⚠️  Erro ao listar processos: {e}")
-            return []
-        
-        # Ordenar por uso de CPU (se disponível)
-        try:
-            processos.sort(key=lambda x: x.get('cpu_percent', 0), reverse=True)
-        except:
-            pass
-        
-        return processos[:limite]
-    
-    def mostrar_processos(processos):
-        """Mostra lista de processos formatada"""
-        if not processos:
-            print("❌ Nenhum processo encontrado ou permissão insuficiente")
-            return
-        
-        print("\n" + "="*90)
-        print(f"{'PID':^8} {'NOME':<35} {'CPU%':^6} {'MEM%':^6} {'STATUS':<10}")
-        print("="*90)
-        
-        for proc in processos:
-            pid = str(proc.get('pid', 'N/A'))
-            name = proc.get('name', 'Desconhecido')[:24]
-            cpu = f"{proc.get('cpu_percent', 0):.1f}" if proc.get('cpu_percent') is not None else "N/A"
-            mem = f"{proc.get('memory_percent', 0):.1f}" if proc.get('memory_percent') is not None else "N/A"
-            
-            # Tentar obter status (com tratamento de erro)
-            status = "N/A"
-            try:
-                import psutil
-                p = psutil.Process(proc['pid'])
-                status = p.status()[:9]
-            except:
-                pass
-            
-            print(f"{pid:^8} {name:<25} {cpu:^6} {mem:^6} {status:<10}")
-    
-    def detalhes_processo_seguro(pid):
-        """Mostra detalhes de um processo com tratamento de segurança"""
-        try:
-            import psutil
-            p = psutil.Process(pid)
-            
-            print(f"\n🔍 DETALHES DO PROCESSO PID: {pid}")
-            print("-" * 50)
-            
-            try:
-                print(f"Nome: {p.name()}")
-            except:
-                print("Nome: Acesso negado")
-            
-            try:
-                print(f"Usuário: {p.username()}")
-            except:
-                print("Usuário: Acesso negado")
-            
-            try:
-                print(f"Status: {p.status()}")
-            except:
-                print("Status: Acesso negado")
-            
-            # Recursos (com tratamento)
-            print(f"\n🔧 RECURSOS:")
-            try:
-                cpu_percent = p.cpu_percent(interval=0.1)
-                print(f"CPU: {cpu_percent}%")
-            except:
-                print("CPU: Acesso negado")
-            
-            try:
-                mem_info = p.memory_info()
-                print(f"Memória RSS: {mem_info.rss / (1024**2):.1f} MB")
-            except:
-                print("Memória: Acesso negado")
-            
-            print("-" * 50)
-            
-        except psutil.NoSuchProcess:
-            print(f"❌ Processo com PID {pid} não existe")
-        except (psutil.AccessDenied, PermissionError):
-            print(f"⚠️  Acesso negado ao processo {pid}")
-            print("   Execute com privilégios elevados (sudo) para mais informações")
-        except Exception as e:
-            print(f"❌ Erro: {e}")
-    
-    def matar_processo_seguro(pid):
-        """Tenta matar um processo com verificações de segurança"""
-        try:
-            import psutil
-            p = psutil.Process(pid)
-            
-            # Tentar obter nome (pode falhar por permissão)
-            nome = "Desconhecido"
-            try:
-                nome = p.name()
-            except:
-                pass
-            
-            print(f"\n⚠️  ATENÇÃO: Você está prestes a matar o processo:")
-            print(f"PID: {pid}")
-            print(f"Nome: {nome}")
-            
-            # Verificar se é um processo crítico do sistema
-            processos_criticos = ['systemd', 'init', 'kernel', 'Xorg', 'gnome-shell', 'plasmashell']
-            if any(critico in nome.lower() for critico in processos_criticos):
-                print("🚨 ALERTA: Este parece ser um processo crítico do sistema!")
-                print("   Matá-lo pode causar instabilidade ou travamento!")
-            
-            confirmar = input("\nTem certeza ABSOLUTA? (digite 'SIM' para confirmar): ")
-            
-            if confirmar.upper() == 'SIM':
-                print(f"Encerrando processo {pid}...")
-                
-                try:
-                    # Tenta terminar graciosamente
-                    p.terminate()
-                    time.sleep(1)
-                    
-                    # Verifica se ainda está rodando
-                    if p.is_running():
-                        print("Processo não respondeu, forçando...")
-                        try:
-                            p.kill()
-                        except:
-                            print("❌ Não foi possível forçar encerramento")
-                    
-                    print(f"✅ Processo {pid} encerrado")
-                    
-                except (psutil.AccessDenied, PermissionError):
-                    print("❌ Permissão negada. Execute com sudo/administrador")
-                except Exception as e:
-                    print(f"❌ Erro ao encerrar: {e}")
-            
-            else:
-                print("❌ Operação cancelada.")
-                
-        except psutil.NoSuchProcess:
-            print(f"❌ Processo com PID {pid} não existe")
-        except (psutil.AccessDenied, PermissionError):
-            print(f"⚠️  Acesso negado (execute com privilégios elevados)")
-        except Exception as e:
-            print(f"❌ Erro: {e}")
-    
-    def monitorar_recursos_seguro():
-        """Monitora recursos com tratamento de erros de permissão"""
-        print("\n📊 MONITOR DE RECURSOS - Pressione Ctrl+C para sair")
-        print("-" * 60)
-        
-        try:
-            import psutil
-        except ImportError:
-            print("❌ psutil não disponível para monitoramento")
-            return
-        
-        try:
-            update_count = 0
-            while True:
-                # Limpa a tela
-                print("\033[H\033[J", end="")
-                
-                print("📊 MONITOR DE RECURSOS EM TEMPO REAL")
-                print("-" * 60)
-                print(f"Atualização: #{update_count}")
-                
-                # CPU (com fallback)
-                try:
-                    cpu_percent = psutil.cpu_percent(interval=0.5)
-                    print(f"\n💻 CPU: {cpu_percent:.1f}%")
-                    bar_length = min(20, int(cpu_percent / 5))
-                    bar = "█" * bar_length + "░" * (20 - bar_length)
-                    print(f"  [{bar}]")
-                except:
-                    print("\n💻 CPU: Monitoramento não disponível")
-                
-                # Memória
-                try:
-                    mem = psutil.virtual_memory()
-                    mem_percent = mem.percent
-                    print(f"\n🧠 MEMÓRIA: {mem_percent:.1f}%")
-                    bar_length = min(20, int(mem_percent / 5))
-                    bar = "█" * bar_length + "░" * (20 - bar_length)
-                    print(f"  [{bar}] {mem.used / (1024**3):.1f}GB / {mem.total / (1024**3):.1f}GB")
-                except:
-                    print("\n🧠 MEMÓRIA: Monitoramento não disponível")
-                
-                # Processos (limitado devido a permissões)
-                try:
-                    processos = []
-                    for proc in psutil.process_iter(['pid', 'name', 'cpu_percent']):
-                        try:
-                            info = proc.info
-                            if info.get('cpu_percent', 0) > 1.0:  # > 1% CPU
-                                processos.append(info)
-                        except:
-                            continue
-                    
-                    # Ordenar e pegar top 5
-                    processos.sort(key=lambda x: x.get('cpu_percent', 0), reverse=True)
-                    
-                    if processos:
-                        print(f"\n🔥 PROCESSOS ATIVOS (top {min(3, len(processos))}):")
-                        for proc in processos[:3]:
-                            name = proc.get('name', 'N/A')[:20]
-                            cpu = proc.get('cpu_percent', 0)
-                            print(f"  {name:<20} CPU: {cpu:5.1f}%")
-                except:
-                    print("\n🔥 PROCESSOS: Monitoramento limitado")
-                
-                print(f"\n⏱️  {datetime.now().strftime('%H:%M:%S')} | Ctrl+C para parar")
-                
-                update_count += 1
-                time.sleep(2)
-                
-        except KeyboardInterrupt:
-            print("\n🛑 Monitoramento interrompido")
-        except Exception as e:
-            print(f"\n❌ Erro no monitoramento: {e}")
-    
-    def verificar_permissoes():
-        """Verifica se temos permissões adequadas"""
-        sistema = platform.system()
-        
-        print("\n🔐 VERIFICAÇÃO DE PERMISSÕES:")
-        print("-" * 40)
-        
-        if sistema == "Linux":
-            # Verifica se é root no Linux
-            if os.geteuid() == 0:
-                print("✅ Executando como root (sudo)")
-                print("   Acesso completo aos processos do sistema")
-                return True
-            else:
-                print("⚠️  Executando como usuário normal no Linux")
-                print("   Algumas informações podem ser limitadas")
-                print("\n💡 Dica: Execute com 'sudo' para acesso completo")
-                return False
-        elif sistema == "Windows":
-            # No Windows, verifica se é administrador
-            try:
-                import ctypes
-                is_admin = ctypes.windll.shell32.IsUserAnAdmin() != 0
-                if is_admin:
-                    print("✅ Executando como Administrador")
-                    return True
-                else:
-                    print("⚠️  Executando como usuário normal no Windows")
-                    print("   Alguns recursos podem ser limitados")
-                    return False
-            except:
-                print("ℹ️  Sistema Windows detectado")
-                return True
-        else:
-            print(f"ℹ️  Sistema {sistema} detectado")
-            return True
-    
-    # Verificar se psutil está instalado
-    if not verificar_psutil():
-        print("❌ Não é possível executar sem psutil.")
-        time.sleep(3)
-        return
-    
-    # Menu principal
-    while True:
-        print("\n" + "="*60)
-        print("🖥️  GERENCIADOR DE PROCESSOS DO SISTEMA")
-        print("="*60)
-        
-        # Verificar permissões
-        tem_permissao = verificar_permissoes()
-        
-        # Obter informações do sistema (de forma segura)
-        obter_info_sistema_segura()
-        
-        print("\n📋 MENU PRINCIPAL:")
-        print("1. 📋 Listar processos (acesso disponível)")
-        print("2. 🔥 Listar processos ativos")
-        print("3. 🔍 Detalhes de processo (por PID)")
-        print("4. 🚫 Matar processo (cuidado!)")
-        print("5. 📊 Monitorar recursos")
-        if not tem_permissao:
-            print("6. 💡 Dicas para acesso completo")
-        print("0. ↩️  Voltar ao menu principal")
-        
-        try:
-            opcao = input("\nEscolha uma opção: ").strip()
-            
-            if opcao == "1":
-                processos = listar_processos_seguro("todos", 100)
-                mostrar_processos(processos)
-                input("\nPressione Enter para continuar...")
-                
-            elif opcao == "2":
-                processos = listar_processos_seguro("ativos", 15)
-                mostrar_processos(processos)
-                input("\nPressione Enter para continuar...")
-                
-            elif opcao == "3":
-                try:
-                    pid_input = input("Digite o PID do processo (ou Enter para ver lista): ").strip()
-                    if pid_input:
-                        pid = int(pid_input)
-                        detalhes_processo_seguro(pid)
-                    else:
-                        # Mostrar lista primeiro
-                        processos = listar_processos_seguro("todos", 10)
-                        mostrar_processos(processos)
-                        try:
-                            pid = int(input("\nDigite o PID para detalhes: "))
-                            detalhes_processo_seguro(pid)
-                        except ValueError:
-                            print("❌ PID inválido")
-                except ValueError:
-                    print("❌ PID deve ser um número!")
-                input("\nPressione Enter para continuar...")
-                
-            elif opcao == "4":
-                try:
-                    pid_input = input("Digite o PID do processo a matar: ").strip()
-                    if pid_input:
-                        pid = int(pid_input)
-                        matar_processo_seguro(pid)
-                    else:
-                        print("❌ PID não pode estar vazio")
-                except ValueError:
-                    print("❌ PID deve ser um número!")
-                input("\nPressione Enter para continuar...")
-                
-            elif opcao == "5":
-                monitorar_recursos_seguro()
-                
-            elif opcao == "6" and not tem_permissao:
-                print("\n💡 DICAS PARA ACESSO COMPLETO:")
-                print("-" * 40)
-                sistema = platform.system()
-                if sistema == "Linux":
-                    print("No Linux, execute o pyOS com sudo:")
-                    print("  sudo python3 pyOS.py")
-                    print("\nOu execute apenas este app com sudo:")
-                    print("  sudo python3 -c 'import psutil; print(psutil.cpu_percent())'")
-                elif sistema == "Windows":
-                    print("No Windows, execute o terminal como Administrador:")
-                    print("  1. Clique direito no terminal/CMD")
-                    print("  2. Escolha 'Executar como Administrador'")
-                    print("  3. Execute o pyOS normalmente")
-                print("\n⚠️  ATENÇÃO: Execute com privilégios apenas se necessário!")
-                print("   Processos do sistema podem ser críticos.")
-                input("\nPressione Enter para continuar...")
-                
-            elif opcao == "0":
-                print("👋 Voltando ao menu principal...")
-                break
-                
-            else:
-                print("❌ Opção inválida!")
-                time.sleep(1)
-                
-        except KeyboardInterrupt:
-            print("\n\n⚠️  Operação interrompida pelo usuário")
-            break
-        except Exception as e:
-            print(f"❌ Erro: {e}")
-            time.sleep(2)
+
 
 def uninstall():
     """
@@ -3718,6 +3813,7 @@ def uninstall():
     import shutil
     import json
     import sys
+    from datetime import datetime
     
     # Cores para o terminal
     RED = '\033[91m'
@@ -4198,14 +4294,264 @@ def uninstall():
             print(f"{RED}❌ Erro: {e}{RESET}")
             time.sleep(2)
 
+import curses
+import curses.ascii
+from PIL import Image
+import datetime
+import os
+
+def run_drawing_app(stdscr):
+    # Configurações iniciais - com tratamento de erro para curs_set
+    try:
+        curses.curs_set(0)  # Tenta esconder o cursor
+    except:
+        pass  # Ignora se não for possível
+    
+    stdscr.nodelay(0)
+    stdscr.timeout(100)
+    
+    # Inicializa cores
+    curses.start_color()
+    curses.use_default_colors()
+    
+    # Inicializa pares de cores se suportado
+    if curses.has_colors():
+        curses.init_pair(1, curses.COLOR_RED, -1)
+        curses.init_pair(2, curses.COLOR_GREEN, -1)
+        curses.init_pair(3, curses.COLOR_YELLOW, -1)
+        curses.init_pair(4, curses.COLOR_BLUE, -1)
+        curses.init_pair(5, curses.COLOR_MAGENTA, -1)
+        curses.init_pair(6, curses.COLOR_CYAN, -1)
+    
+    # Área de desenho
+    height, width = stdscr.getmaxyx()
+    height -= 2  # Espaço para status
+    
+    # Canvas usando dicionário para posições desenhadas
+    canvas = {}
+    current_color = 1
+    pen_down = True
+    eraser_mode = False  # Novo modo borracha
+    
+    # Posição inicial do cursor
+    cursor_y = min(height // 2, height - 1)
+    cursor_x = min(width // 2, width - 1)
+    
+    # Cores disponíveis
+    colors = [1, 2, 3, 4, 5, 6]
+    color_index = 0
+    
+    # Nomes das cores
+    color_names = {1: 'VERMELHO', 2: 'VERDE', 3: 'AMARELO', 
+                  4: 'AZUL', 5: 'MAGENTA', 6: 'CIANO'}
+    
+    while True:
+        # Limpa a tela
+        stdscr.clear()
+        
+        # Desenha todos os pontos salvos
+        for (y, x), color in list(canvas.items()):
+            if 0 <= y < height and 0 <= x < width:
+                try:
+                    if curses.has_colors():
+                        stdscr.addch(y, x, '█', curses.color_pair(color) | curses.A_BOLD)
+                    else:
+                        stdscr.addch(y, x, '#')
+                except:
+                    pass
+        
+        # Desenha o cursor
+        try:
+            if 0 <= cursor_y < height and 0 <= cursor_x < width:
+                if eraser_mode:
+                    cursor_char = '⌂'  # Cursor de borracha
+                elif pen_down:
+                    cursor_char = '▓'
+                else:
+                    cursor_char = '▒'
+                
+                if curses.has_colors() and not eraser_mode:
+                    stdscr.addch(cursor_y, cursor_x, cursor_char, 
+                               curses.color_pair(current_color) | curses.A_BLINK)
+                else:
+                    stdscr.addch(cursor_y, cursor_x, cursor_char)
+        except:
+            pass
+        
+        # Ação do cursor (desenhar ou apagar)
+        if pen_down:
+            if eraser_mode:
+                # Modo borracha: remove o pixel
+                if (cursor_y, cursor_x) in canvas:
+                    del canvas[(cursor_y, cursor_x)]
+            else:
+                # Modo desenho: adiciona pixel
+                canvas[(cursor_y, cursor_x)] = current_color
+        
+        # Barra de status
+        status_y = height
+        status = f" COR: {color_names[current_color]} | "
+        status += f"CANETA: {'▼' if pen_down else '▲'} | "
+        status += f"BORRACHA: {'ON' if eraser_mode else 'OFF'} | "
+        status += f"POS: ({cursor_x},{cursor_y}) | "
+        status += "TAB:cor | ⬆⬇⬅↪:move | U/D:sobe/desce caneta | E:borracha | B:preenche | C:limpa | S:salva | Q:sair"
+        
+        try:
+            stdscr.addstr(status_y, 0, status[:width-1], curses.A_REVERSE)
+        except:
+            pass
+        
+        stdscr.refresh()
+        
+        # Processa comandos
+        key = stdscr.getch()
+        
+        # Controles de movimento: ⬆ ⬇ ⬅ ↪
+        if key == ord('q') or key == ord('Q'):
+            break
+            
+        # Seta para cima
+        elif key == curses.KEY_UP:
+            cursor_y = max(0, cursor_y - 1)
+        # Seta para baixo
+        elif key == curses.KEY_DOWN:
+            cursor_y = min(height - 1, cursor_y + 1)
+        # Seta para esquerda
+        elif key == curses.KEY_LEFT:
+            cursor_x = max(0, cursor_x - 1)
+        # Seta para direita
+        elif key == curses.KEY_RIGHT:
+            cursor_x = min(width - 1, cursor_x + 1)
+            
+        # Controles da caneta
+        elif key == ord('u') or key == ord('U'):
+            pen_down = False
+        elif key == ord('d') or key == ord('D'):
+            pen_down = True
+            
+        # Controle da borracha (E)
+        elif key == ord('e') or key == ord('E'):
+            eraser_mode = not eraser_mode  # Alterna borracha on/off
+            if eraser_mode:
+                pen_down = True  # Automaticamente desce a caneta no modo borracha
+            
+        # TAB para mudar cor (desativado no modo borracha)
+        elif key == ord('\t'):
+            if not eraser_mode:  # Só muda cor se não estiver no modo borracha
+                color_index = (color_index + 1) % len(colors)
+                current_color = colors[color_index]
+            
+        # Limpar tela
+        elif key == ord('c') or key == ord('C'):
+            canvas.clear()
+            
+        # Preencher tela
+        elif key == ord('b') or key == ord('B'):
+            if not eraser_mode:  # Não permite preencher no modo borracha
+                for y in range(height):
+                    for x in range(width):
+                        canvas[(y, x)] = current_color
+                    
+        # Salvar (Shift + S)
+        elif key == ord('S'):
+            save_canvas(canvas, height, width, stdscr)
+
+def save_canvas(canvas, height, width, stdscr):
+    """Salva o canvas como arquivo PNG"""
+    try:
+        # Mostra mensagem de salvamento
+        try:
+            stdscr.addstr(height, 0, "Salvando PNG...".ljust(width-1), curses.A_REVERSE)
+            stdscr.refresh()
+        except:
+            pass
+        
+        # Cria diretório se não existir
+        os.makedirs("desenhos", exist_ok=True)
+        
+        # Cria imagem RGB branca
+        img = Image.new('RGB', (width, height), 'white')
+        pixels = img.load()
+        
+        # Mapeia cores curses para RGB
+        color_map = {
+            1: (255, 0, 0),      # Vermelho
+            2: (0, 255, 0),      # Verde
+            3: (255, 255, 0),    # Amarelo
+            4: (0, 0, 255),      # Azul
+            5: (255, 0, 255),    # Magenta
+            6: (0, 255, 255),    # Ciano
+        }
+        
+        # Desenha os pontos na imagem
+        for (y, x), color in canvas.items():
+            if 0 <= y < height and 0 <= x < width:
+                pixels[x, y] = color_map.get(color, (0, 0, 0))
+        
+        # Salva arquivo
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        filename = f"desenhos/desenho_{timestamp}.png"
+        img.save(filename)
+        
+        # Mostra confirmação
+        try:
+            stdscr.addstr(height, 0, f"Salvo: {filename}".ljust(width-1), curses.A_REVERSE)
+            stdscr.refresh()
+            curses.napms(2000)
+        except:
+            pass
+            
+    except Exception as e:
+        try:
+            stdscr.addstr(height, 0, f"Erro ao salvar: {str(e)[:30]}".ljust(width-1), curses.A_REVERSE)
+            stdscr.refresh()
+            curses.napms(2000)
+        except:
+            pass
+
+def paint():
+    try:
+        curses.wrapper(run_drawing_app)
+    except KeyboardInterrupt:
+        pass
+    except Exception as e:
+        print(f"Erro: {e}")
+
+def rodar2(script, id):
+	null = subprocess.DEVNULL
+	proc = subprocess.Popen([sys.executable, script], stdout=null, stdin=null, stderr=null)
+	rodando2[id] = proc.pid
+	return proc
+
+def init2():
+    # Verificar se a pasta existe antes de tentar listar
+    if not os.path.exists("./apps"):
+        os.makedirs("./apps", exist_ok=True)
+        return
+    
+    if not os.path.exists("app_boot_perms.json"):
+        with open("app_boot_perms.json", "w") as f:
+            f.write("{}")
+        return
+    
+    with open("app_boot_perms.json", "r") as f:
+        bp = json.load(f)
+    
+    for app in os.listdir("./apps"):
+        path = os.path.join("./apps", app)
+        if os.path.isdir(path):
+            if bp.get(app, False):
+                if os.path.exists(f"{path}/exec2.py"):
+                    rodar2(f"{path}/exec2.py", app)
+init2()
+
 apps = {
     "calculadora": calculadora,
     "notepad": notepad,
     "config": config,
     "terminal": terminal,
     "gerenciador de arquivos": fileManager,
-    "appsInstalados": appsInstalados,
-    "navegador": navegador_tui,
+    "navegador": navegador,
     "gerenciador de tarefas": taskmgr,
     "mensagens": messages,
     "fotos": images,
@@ -4214,18 +4560,25 @@ apps = {
     "controle de internet": internet_control,
     "python": python3,
     "audio": audio,
-    "processos-sistema": processos_sistema
+    "paint": paint,
 }
 
-try:
-	pyOS_proc.init()
-except Exception:
-	pass
+def uplistinst():
+	global apps
+	for k, v in apps.copy().items():
+		if v == "app":
+			del apps[k]
+	for app in os.listdir("./apps"):
+		apps[app] = "app"
+
+
+
 executando = True
 def parar():
 	global executando
 	executando = False
-while executando:			
+while executando:
+	uplistinst()			
 	print(colorconfig + "colorteste01")
 	os.system("clear")
 	try:
@@ -4237,13 +4590,16 @@ while executando:
 	
 	print(Fore.CYAN + "=python==hora==fechar==hostsys=\n")
 	print(colorconfig + "apps:")
+	atalhos = {}
+	for i, app in enumerate(sorted(apps.keys())):
+		atalhos[i] = app
 	nomes = sorted(apps.keys())
 	for i in range(0, len(nomes), 4):
 		# Imprime até 4 apps por linha
 		for j in range(4):
 			if i + j < len(nomes):
-				print(nomes[i + j], end='  ')
-		print()  # Nova linha após cada grupo de 
+				print(f"{i + j}. {nomes[i + j]}", end='  ')
+		print()  # Adiciona uma quebra de linha após cada grupo de 4
 	app = input("app: ")
 	os.system("clear")
 	if app == "func":
@@ -4281,7 +4637,6 @@ while executando:
 			del hora
 			time.sleep(3)
 		elif funcesc == "fechar":
-			pyOS_proc.stopall()
 			quit()
 		elif funcesc == "hostsys":
 			os.system("clear")
@@ -4293,18 +4648,18 @@ while executando:
 			if subfuncesc == "desligar":
 				confirmar = input("desligar?(s/n):")
 				if confirmar == "s":
-					pyOS_proc.stopall()
 					os.system("sh ./pyOS/system/hostsys/shutdown.sh")
 			elif subfuncesc == "reiniciar":
 				confirmar = input("reiniciar?(s/n): ")
 				if confirmar == "s":
-					pyOS_proc.stopall()
 					os.system("sh ./pyOS/system/hostsys/restart.sh")
 	elif app == "quit":
-		pyOS_proc.stopall()
 		quit()
 	elif app in apps:
 		abrirapp(app)
+	elif app.isdigit():
+		if int(app) in atalhos:
+			abrirapp(atalhos[int(app)])
 	else:
 		print(Fore.RED + "app não encontrado")
 		time.sleep(3)

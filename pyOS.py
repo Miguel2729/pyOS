@@ -28,6 +28,7 @@ import time
 import random
 import json
 import socket
+from typing import List, Dict
 import re
 import sys
 from datetime import datetime
@@ -40,7 +41,7 @@ import tempfile
 import curses
 from pathlib import Path
 import colorama
-versionparts = [6, 1]
+versionparts = [6, 2]
 rodando2 = {}
 version = f"v{versionparts[0]}.{versionparts[1]}"
 dir_original = os.getcwd()
@@ -498,6 +499,449 @@ def formatar_bytes(bytes_valor):
 		# Remove zeros à direita e ponto se necessário
 		return f"{valor_arredondado:.2f}".rstrip('0').rstrip('.') + f" {unidades[indice]}"
 
+
+
+def diskMgr():
+    """
+    Gerenciador de disco para Linux com operações de gerenciamento
+    """
+    
+    def limpar_tela():
+        """Limpa a tela do terminal"""
+        os.system('clear')
+    
+    def obter_discos() -> List[Dict]:
+        """Obtém lista de discos do sistema"""
+        discos = []
+        try:
+            resultado = subprocess.run(
+                ['lsblk', '-o', 'NAME,SIZE,TYPE,MODEL,MOUNTPOINT', '-d', '-n'],
+                capture_output=True, text=True
+            )
+            
+            for linha in resultado.stdout.strip().split('\n'):
+                if linha and 'disk' in linha:
+                    partes = linha.split(maxsplit=4)
+                    if len(partes) >= 3:
+                        discos.append({
+                            'nome': partes[0],
+                            'tamanho': partes[1],
+                            'tipo': partes[2],
+                            'modelo': partes[3] if len(partes) > 3 else 'N/A',
+                            'montagem': partes[4] if len(partes) > 4 else 'N/A'
+                        })
+            return discos
+        except Exception as e:
+            print(f"Erro ao obter discos: {e}")
+            return []
+    
+    def obter_particoes(disco: str) -> List[Dict]:
+        """Obtém partições de um disco específico"""
+        particoes = []
+        try:
+            resultado = subprocess.run(
+                ['lsblk', '-o', 'NAME,SIZE,TYPE,MOUNTPOINT,FSTYPE', f'/dev/{disco}', '-n'],
+                capture_output=True, text=True
+            )
+            
+            for linha in resultado.stdout.strip().split('\n')[1:]:
+                if linha and 'part' in linha:
+                    partes = linha.split()
+                    if len(partes) >= 3:
+                        particoes.append({
+                            'nome': partes[0],
+                            'tamanho': partes[1],
+                            'tipo': partes[2],
+                            'montagem': partes[3] if len(partes) > 3 else 'N/A',
+                            'fs': partes[4] if len(partes) > 4 else 'N/A'
+                        })
+            return particoes
+        except Exception as e:
+            print(f"Erro ao obter partições: {e}")
+            return []
+    
+    def exibir_discos(discos: List[Dict]) -> None:
+        """Exibe lista de discos"""
+        print("\n" + "="*80)
+        print(" " * 30 + "DISPOSITIVOS DE ARMAZENAMENTO")
+        print("="*80)
+        print(f"{'Nº':<4} {'Disco':<12} {'Tamanho':<10} {'Modelo':<25} {'Montagem':<15}")
+        print("-"*80)
+        
+        for i, disco in enumerate(discos, 1):
+            print(f"{i:<4} {disco['nome']:<12} {disco['tamanho']:<10} "
+                  f"{disco['modelo'][:24]:<25} {disco['montagem']:<15}")
+        print("="*80)
+    
+    def exibir_particoes(disco: str, particoes: List[Dict]) -> None:
+        """Exibe partições de um disco"""
+        print("\n" + "="*80)
+        print(f" " * 25 + f"PARTIÇÕES DO DISCO: {disco}")
+        print("="*80)
+        print(f"{'Nº':<4} {'Partição':<15} {'Tamanho':<10} {'Sistema':<12} {'Montagem':<20}")
+        print("-"*80)
+        
+        for i, part in enumerate(particoes, 1):
+            print(f"{i:<4} {part['nome']:<15} {part['tamanho']:<10} "
+                  f"{part['fs']:<12} {part['montagem']:<20}")
+        
+        if not particoes:
+            print(" " * 30 + "Nenhuma partição encontrada")
+        print("="*80)
+    
+    def criar_tabela_particao(disco: str) -> bool:
+        """Cria nova tabela de partição (GPT ou MBR)"""
+        print("\n" + "="*60)
+        print(" " * 15 + "CRIAR TABELA DE PARTIÇÃO")
+        print("="*60)
+        print("ATENÇÃO: Isso vai APAGAR TODOS OS DADOS do disco!")
+        print(f"Disco: /dev/{disco}")
+        print("\nTipos de tabela:")
+        print("1. GPT (recomendado para UEFI)")
+        print("2. MBR (para sistemas legados)")
+        
+        opcao = input("\nEscolha o tipo (1-2): ").strip()
+        
+        if opcao not in ['1', '2']:
+            print("Opção inválida!")
+            return False
+        
+        confirm = input(f"\nDeseja realmente criar tabela de partição em /dev/{disco}? (s/N): ").strip().lower()
+        
+        if confirm != 's':
+            print("Operação cancelada.")
+            return False
+        
+        try:
+            if opcao == '1':
+                subprocess.run(['sudo', 'parted', f'/dev/{disco}', 'mklabel', 'gpt'], check=True)
+                print("Tabela GPT criada com sucesso!")
+            else:
+                subprocess.run(['sudo', 'parted', f'/dev/{disco}', 'mklabel', 'msdos'], check=True)
+                print("Tabela MBR criada com sucesso!")
+            return True
+        except subprocess.CalledProcessError as e:
+            print(f"Erro ao criar tabela: {e}")
+            return False
+    
+    def criar_particao(disco: str) -> bool:
+        """Cria nova partição usando parted"""
+        print("\n" + "="*60)
+        print(" " * 20 + "CRIAR NOVA PARTIÇÃO")
+        print("="*60)
+        print(f"Disco: /dev/{disco}")
+        
+        try:
+            # Obtém tamanho do disco
+            resultado = subprocess.run(['lsblk', '-b', '-o', 'SIZE', f'/dev/{disco}', '-n'], 
+                                     capture_output=True, text=True)
+            tamanho_bytes = int(resultado.stdout.strip())
+            tamanho_gb = tamanho_bytes / (1024**3)
+            
+            print(f"\nTamanho total do disco: {tamanho_gb:.1f} GB")
+            print("\nExemplos de tamanho:")
+            print("- 100% (usar todo o disco)")
+            print("- 50% (metade do disco)")
+            print("- 10GB (10 gigabytes)")
+            print("- 512MB (512 megabytes)")
+            
+            tamanho = input("\nDigite o tamanho da partição (ex: 10GB, 50%, 100%): ").strip()
+            
+            # Converte tamanho para formato do parted
+            if tamanho.endswith('%'):
+                tamanho = tamanho
+            elif tamanho.upper().endswith('GB'):
+                tamanho = tamanho.upper()
+            elif tamanho.upper().endswith('MB'):
+                tamanho = tamanho.upper()
+            else:
+                tamanho = tamanho + "GB"
+            
+            subprocess.run(['sudo', 'parted', f'/dev/{disco}', 'mkpart', 'primary', '0%', tamanho], check=True)
+            print("Partição criada com sucesso!")
+            
+            # Atualiza tabela de partições
+            subprocess.run(['sudo', 'partprobe', f'/dev/{disco}'], check=True)
+            time.sleep(1)
+            return True
+            
+        except subprocess.CalledProcessError as e:
+            print(f"Erro ao criar partição: {e}")
+            return False
+    
+    def formatar_particao(particao: str) -> bool:
+        """Formata uma partição com sistema de arquivos"""
+        print("\n" + "="*60)
+        print(" " * 20 + "FORMATAR PARTIÇÃO")
+        print("="*60)
+        print(f"Partição: /dev/{particao}")
+        print("\nSistemas de arquivos disponíveis:")
+        print("1. ext4 (recomendado para Linux)")
+        print("2. NTFS (compatível com Windows)")
+        print("3. FAT32 (compatibilidade máxima)")
+        print("4. btrfs (avançado, com snapshots)")
+        print("5. xfs (bom para arquivos grandes)")
+        
+        opcao = input("\nEscolha o sistema de arquivos (1-5): ").strip()
+        
+        sistemas = {
+            '1': 'ext4',
+            '2': 'ntfs',
+            '3': 'fat32',
+            '4': 'btrfs',
+            '5': 'xfs'
+        }
+        
+        if opcao not in sistemas:
+            print("Opção inválida!")
+            return False
+        
+        fs = sistemas[opcao]
+        
+        confirm = input(f"\nDeseja formatar /dev/{particao} como {fs}? (s/N): ").strip().lower()
+        
+        if confirm != 's':
+            print("Operação cancelada.")
+            return False
+        
+        try:
+            print(f"Formatando /dev/{particao} como {fs}...")
+            
+            if fs == 'ntfs':
+                subprocess.run(['sudo', 'mkfs.ntfs', '-f', f'/dev/{particao}'], check=True)
+            elif fs == 'fat32':
+                subprocess.run(['sudo', 'mkfs.vfat', '-F32', f'/dev/{particao}'], check=True)
+            elif fs == 'btrfs':
+                subprocess.run(['sudo', 'mkfs.btrfs', '-f', f'/dev/{particao}'], check=True)
+            elif fs == 'xfs':
+                subprocess.run(['sudo', 'mkfs.xfs', '-f', f'/dev/{particao}'], check=True)
+            else:
+                subprocess.run(['sudo', 'mkfs.ext4', '-F', f'/dev/{particao}'], check=True)
+            
+            print(f"Formatação concluída com sucesso!")
+            return True
+            
+        except subprocess.CalledProcessError as e:
+            print(f"Erro ao formatar: {e}")
+            return False
+    
+    def montar_particao(particao: str) -> bool:
+        """Monta uma partição em um ponto de montagem"""
+        print("\n" + "="*60)
+        print(" " * 20 + "MONTAR PARTIÇÃO")
+        print("="*60)
+        print(f"Partição: /dev/{particao}")
+        
+        ponto = input("\nDigite o ponto de montagem (ex: /mnt/dados): ").strip()
+        
+        if not ponto:
+            print("Ponto de montagem inválido!")
+            return False
+        
+        # Cria diretório se não existir
+        if not os.path.exists(ponto):
+            try:
+                subprocess.run(['sudo', 'mkdir', '-p', ponto], check=True)
+            except:
+                print(f"Não foi possível criar o diretório {ponto}")
+                return False
+        
+        try:
+            subprocess.run(['sudo', 'mount', f'/dev/{particao}', ponto], check=True)
+            print(f"Partição montada em {ponto} com sucesso!")
+            return True
+        except subprocess.CalledProcessError as e:
+            print(f"Erro ao montar: {e}")
+            return False
+    
+    def desmontar_particao(particao: str) -> bool:
+        """Desmonta uma partição"""
+        print("\n" + "="*60)
+        print(" " * 20 + "DESMONTAR PARTIÇÃO")
+        print("="*60)
+        print(f"Partição: /dev/{particao}")
+        
+        confirm = input("\nDeseja desmontar esta partição? (s/N): ").strip().lower()
+        
+        if confirm != 's':
+            print("Operação cancelada.")
+            return False
+        
+        try:
+            subprocess.run(['sudo', 'umount', f'/dev/{particao}'], check=True)
+            print("Partição desmontada com sucesso!")
+            return True
+        except subprocess.CalledProcessError as e:
+            print(f"Erro ao desmontar: {e}")
+            return False
+    
+    def deletar_particao(disco: str, particao: str) -> bool:
+        """Deleta uma partição"""
+        print("\n" + "="*60)
+        print(" " * 20 + "DELETAR PARTIÇÃO")
+        print("="*60)
+        print(f"Partição: /dev/{particao}")
+        print("\nATENÇÃO: Isso vai APAGAR TODOS OS DADOS da partição!")
+        
+        confirm = input(f"\nDeseja realmente deletar /dev/{particao}? (s/N): ").strip().lower()
+        
+        if confirm != 's':
+            print("Operação cancelada.")
+            return False
+        
+        try:
+            # Obtém o número da partição
+            num_part = particao.replace(disco, '')
+            
+            # Usa parted para deletar
+            subprocess.run(['sudo', 'parted', f'/dev/{disco}', 'rm', num_part], check=True)
+            print("Partição deletada com sucesso!")
+            
+            # Atualiza tabela
+            subprocess.run(['sudo', 'partprobe', f'/dev/{disco}'], check=True)
+            return True
+            
+        except subprocess.CalledProcessError as e:
+            print(f"Erro ao deletar partição: {e}")
+            return False
+    
+    def gerenciar_particoes(disco: str, particao_nome: str, particao: Dict) -> None:
+        """Menu para gerenciar uma partição específica"""
+        while True:
+            limpar_tela()
+            print("\n" + "="*70)
+            print(f" " * 20 + f"GERENCIANDO PARTIÇÃO: {particao_nome}")
+            print("="*70)
+            print(f"Tamanho: {particao['tamanho']}")
+            print(f"Sistema: {particao['fs']}")
+            print(f"Montagem: {particao['montagem']}")
+            print("="*70)
+            print("\nOPÇÕES:")
+            print("1. Formatar partição")
+            print("2. Montar partição")
+            print("3. Desmontar partição")
+            print("4. Deletar partição")
+            print("5. Voltar")
+            print("="*70)
+            
+            opcao = input("\nEscolha uma opção (1-5): ").strip()
+            
+            if opcao == '1':
+                if formatar_particao(particao_nome):
+                    input("\nPartição formatada! Pressione ENTER para continuar...")
+            elif opcao == '2':
+                if montar_particao(particao_nome):
+                    input("\nPartição montada! Pressione ENTER para continuar...")
+            elif opcao == '3':
+                if desmontar_particao(particao_nome):
+                    input("\nPartição desmontada! Pressione ENTER para continuar...")
+            elif opcao == '4':
+                if deletar_particao(disco, particao_nome):
+                    input("\nPartição deletada! Pressione ENTER para continuar...")
+                    break
+            elif opcao == '5':
+                break
+            else:
+                print("\nOpção inválida!")
+                input("Pressione ENTER para continuar...")
+    
+    def gerenciar_disco(disco: str) -> None:
+        """Menu para gerenciar um disco específico"""
+        while True:
+            limpar_tela()
+            print("\n" + "="*70)
+            print(f" " * 20 + f"GERENCIANDO DISCO: {disco}")
+            print("="*70)
+            
+            particoes = obter_particoes(disco)
+            exibir_particoes(disco, particoes)
+            
+            print("\n" + "="*70)
+            print("OPÇÕES:")
+            print("1. Criar nova partição")
+            print("2. Criar nova tabela de partição (APAGA TODOS OS DADOS)")
+            print("3. Gerenciar uma partição existente")
+            print("4. Voltar ao menu principal")
+            print("5. Sair")
+            print("="*70)
+            
+            opcao = input("\nEscolha uma opção (1-5): ").strip()
+            
+            if opcao == '1':
+                if criar_particao(disco):
+                    input("\nPartição criada! Pressione ENTER para continuar...")
+            elif opcao == '2':
+                if criar_tabela_particao(disco):
+                    input("\nTabela criada! Pressione ENTER para continuar...")
+            elif opcao == '3':
+                if particoes:
+                    print("\nPartições disponíveis:")
+                    for i, part in enumerate(particoes, 1):
+                        print(f"{i}. {part['nome']} ({part['tamanho']})")
+                    
+                    escolha = input("\nEscolha o número da partição: ").strip()
+                    if escolha.isdigit():
+                        idx = int(escolha) - 1
+                        if 0 <= idx < len(particoes):
+                            gerenciar_particoes(disco, particoes[idx]['nome'], particoes[idx])
+                else:
+                    print("\nNenhuma partição disponível!")
+                    input("Pressione ENTER para continuar...")
+            elif opcao == '4':
+                break
+            elif opcao == '5':
+                print("\nSaindo...")
+                exit(0)
+            else:
+                print("\nOpção inválida!")
+                input("Pressione ENTER para continuar...")
+    
+    def menu_principal():
+        """Menu principal da aplicação"""
+        while True:
+            limpar_tela()
+            print("\n" + "="*70)
+            print(" " * 20 + "GERENCIADOR DE DISCO")
+            print(" " * 22 + "Disk Manager")
+            print("="*70)
+            
+            discos = obter_discos()
+            exibir_discos(discos)
+            
+            print("\n" + "="*70)
+            print("OPÇÕES:")
+            print("0. Atualizar lista")
+            print(f"1-{len(discos)}. Gerenciar disco específico")
+            print("Q. Sair")
+            print("="*70)
+            
+            opcao = input("\nEscolha uma opção: ").strip().upper()
+            
+            if opcao == 'Q':
+                print("\nSaindo do Disk Manager...")
+                break
+            elif opcao == '0':
+                continue
+            elif opcao.isdigit():
+                num = int(opcao)
+                if 1 <= num <= len(discos):
+                    gerenciar_disco(discos[num-1]['nome'])
+                else:
+                    print("\nNúmero de disco inválido!")
+                    input("Pressione ENTER para continuar...")
+            else:
+                print("\nOpção inválida!")
+                input("Pressione ENTER para continuar...")
+    
+    # Executa o programa
+    try:
+        menu_principal()
+    except KeyboardInterrupt:
+        print("\n\nPrograma interrompido pelo usuário.")
+    except Exception as e:
+        print(f"\nErro inesperado: {e}")
+        input("Pressione ENTER para sair...")
+
 def config():
 	global rodando2
 	def cls():
@@ -509,6 +953,7 @@ def config():
 		print("1. internet")
 		print("2. aplicativos")
 		print("3. desinstalar o pyOS")
+		print("4. gerenciar discos")
 		print("outro. sair")
 		print()
 		try:
@@ -561,6 +1006,8 @@ def config():
 				print("4. forçar encerramento")
 				print("5. autorizar iniciar com o sistema")
 				print("6. desautorizar iniciar com o sistema")
+				print("7. limpar cache")
+				print("8. propriedades")
 				print("outro. sair")
 				try:
 					aop = int(input("opção: "))
@@ -570,14 +1017,16 @@ def config():
 				if aop == 1:
 					asize = calcular_tamanho_pasta(path)
 					dsize = calcular_tamanho_pasta(wpath)
-					total = asize + dsize
-					print(f"app: {formatar_bytes(asize)}")
+					csize = calcular_tamanho_pasta(f"{wpath}/cache")
+					total = asize + dsize # dsize ja inclui o tamanho do cache
+					print(f"codigo: {formatar_bytes(asize)}")
 					print(f"dados: {formatar_bytes(dsize)}")
+					print(f"cache: {formatar_bytes(csize)}")
 					print(f"total: {formatar_bytes(total)}")
 					input("pressione enter para sair...")
 				elif aop == 2:
 					shutil.rmtree(wpath)
-					os.makedirs(wpath, exist_ok=True)
+					os.makedirs(f"{wpath}/cache", exist_ok=True)
 				elif aop == 3:
 					if apps[op] in rodando2:
 						os.kill(rodando2[apps[op]], signal.SIGKILL)
@@ -585,7 +1034,10 @@ def config():
 					shutil.rmtree(wpath)
 					shutil.rmtree(path)
 					print(f"{apps[op]} desinstalado")
-					time.sleep(0.3)
+					time.sleep(0.5)
+				elif aop == 7:
+					shutil.rmtree(f"{wpath}/cache")
+					os.makedirs(f"{wpath}/cache", exist_ok=True)
 				elif aop == 4:
 					if apps[op] in rodando2:
 						os.kill(rodando2[apps[op]], signal.SIGKILL)
@@ -602,6 +1054,11 @@ def config():
 					with open("app_boot_perms.json", "w") as f:
 						ag[apps[op]] = False
 						json.dump(ag, f)
+				elif aop == 8:
+					at = formatar_bytes(calcular_tamanho_pasta(path))
+					print(f"tamamho: {at}")
+					print(f"executando em segundo plano: {op in rodando2}")
+					input("pressione enter para sair...")
 				
 				else:
 					cls()
@@ -610,6 +1067,10 @@ def config():
 			os.system("clear")
 			criar_barra("desinstalar")
 			uninstall()
+		elif op == 4:
+			os.system('clear')
+			criar_barra("disk manager")
+			diskMgr()
 		else:
 			break
 
@@ -754,7 +1215,10 @@ def terminal():
 import shutil
 
 def fileManager():
+	mostrar_ocultos = False
 	def menu():
+		os.system("clear")
+		criar_barra('gerenciador de arquivos')
 		print("\n📁 Gerenciador de Arquivos")
 		print("[1] Listar arquivos")
 		print("[2] Criar arquivo")
@@ -764,6 +1228,8 @@ def fileManager():
 		print("[6] Mudar diretório")
 		print("[7] Voltar ao diretório anterior")
 		print("[8] Editar arquivo")
+		print("[9] Ativar/Desativar mostrar arquivos ocultos")
+		print("[10] abrir com")
 		print("[0] Sair")
 
 	current_dir = os.getcwd()
@@ -780,13 +1246,16 @@ def fileManager():
 				for a in arquivos:
 					caminho_completo = os.path.join(current_dir, a)
 					if os.path.isdir(caminho_completo):
+						if a.startswith(".") and not mostrar_ocultos:
+							continue
 						print(f" 📁 {a}/")
 					else:
 						tamanho = os.path.getsize(caminho_completo)
 						print(f" 📄 {a} ({formatar_bytes(tamanho)})")
+				
 			except PermissionError:
 				print("❌ Permissão negada para listar este diretório")
-
+			input("pressione enter para sair...")
 		elif opcao == "2":
 			nome = input("Nome do arquivo: ")
 			os.system(f"touch {nome}")
@@ -813,6 +1282,7 @@ def fileManager():
 				print("❌ Arquivo não encontrado.")
 			except Exception as e:
 				print(f"❌ Erro ao ler arquivo: {e}")
+			input("pressione enter para sair.")
 
 		elif opcao == "5":
 			nome = input("Nome do arquivo/diretório: ")
@@ -858,6 +1328,50 @@ def fileManager():
 			nome = input("Nome do arquivo a editar: ")
 			caminho = os.path.join(current_dir, nome)
 			os.system(f"nano {caminho}")
+		elif opcao == "9":
+			mostrar_ocultos = not mostrar_ocultos
+		elif opcao == "10":
+			f = input("nome do arquivo: ")
+			ftype = f.split(".")[1] if "." in f else ""
+			if not ftype:
+				print("arquivo sem extensão")
+				input("pressione enter para sair...")
+				continue
+	
+			# Verificação corrigida do arquivo
+			if not os.path.exists(f"{current_dir}/{f}"):
+				print("esse arquivo não existe")
+				input("pressione enter para sair...")
+				continue
+	
+			an = 1
+			apps = {}
+			for app in os.listdir("./apps"):
+				if os.path.exists(f"./apps/{app}/{ftype}.py"):
+					apps[an] = app
+					an += 1
+	
+			if len(apps) <= 0:
+				print("nenhum app pode abrir o arquivo")
+				input("pressione enter para sair...")
+				continue
+	
+			for i, n in apps.items():
+				print(f"{i}. {n}")
+	
+			try:
+				a = int(input("escolha o app: "))
+			except ValueError:
+				print("digite algo valido")
+				input("pressione enter para sair...")
+				continue
+	
+			if a not in apps:
+				print("digite algo valido")
+				input("pressione enter para sair...")
+				continue
+	
+			abrirapp_c(apps[a], ac=ftype, argv=[f"{current_dir}/{f}"])				
 		elif opcao == "0":
 			print("👋 Encerrando o gerenciador.")
 			break
@@ -2842,7 +3356,7 @@ def internet_control():
 			print(f"{Fore.RED}❌ Erro: {e}{Style.RESET_ALL}")
 
 
-def abrirapp_c(app):
+def abrirapp_c(app, ac="main", argv=[]):
 		env = os.environ.copy()
 		lpath = f"{os.getcwd()}/apps/{app}/lib"
 		if env.get("LD_LIBRARY_PATH", ""):
@@ -2851,7 +3365,7 @@ def abrirapp_c(app):
 				env["LD_LIBRARY_PATH"] = lpath
 
 
-		subprocess.run([sys.executable, f"{os.getcwd()}/apps/{app}/main.py"], cwd=f"{os.getcwd()}/workspace/{app}", env=env)
+		subprocess.run([sys.executable, f"{os.getcwd()}/apps/{app}/{ac}.py", *argv], cwd=f"{os.getcwd()}/workspace/{app}", env=env)
 def abrirapp(app):
 		os.system("clear")
 

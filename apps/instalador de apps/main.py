@@ -34,6 +34,8 @@ except:
 class PPKInstaller:
     def __init__(self):
         self.workspace_dir = os.getcwd()
+        self.apps_dir = Path(os.getcwd()).parent.parent / "apps"
+
         
         self.repos_file = os.path.join(self.workspace_dir, "ppk_repos.json")
         os.system(f"touch {self.repos_file}")

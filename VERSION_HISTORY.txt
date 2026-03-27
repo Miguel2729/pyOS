@@ -29,6 +29,8 @@ no github:
     5.29
     5.30
     5.31
+    6.0
+    6.1
 
 adições mais recentes:
 5.31: melhorou o terminal e corrigiu o bug do terminal, melhorou a exibição dos apps, imagens agora são exibidas com as cores de acordo com a imagem e não em verde

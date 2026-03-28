@@ -94,6 +94,7 @@ sys.excepthook = exception_handler
 
 
 
+
 try:
 		import requests
 except ModuleNotFoundError:
@@ -1405,6 +1406,7 @@ def config():
 		print("2. aplicativos")
 		print("3. desinstalar o pyOS")
 		print("4. gerenciar discos")
+		print("5. atualização/novidades")
 		print("outro/0. sair")
 		print()
 		try:
@@ -1459,6 +1461,7 @@ def config():
 				print("6. desautorizar iniciar com o sistema")
 				print("7. limpar cache")
 				print("8. propriedades")
+				print("9. abrir")
 				print("outro. sair")
 				try:
 					aop = int(input("opção: "))
@@ -1510,6 +1513,8 @@ def config():
 					print(f"tamamho: {at}")
 					print(f"executando em segundo plano: {op in rodando2}")
 					input("pressione enter para sair...")
+				elif aop == 9:
+					abrirapp(apps[op])
 				
 				else:
 					cls()
@@ -1522,6 +1527,38 @@ def config():
 			os.system('clear')
 			criar_barra("disk manager")
 			diskMgr()
+		elif op == 5:
+			cls()
+			os.system("wget https://raw.githubusercontent.com/Miguel2729/pyOS/refs/heads/main/VERSION_HISTORY.txt")
+			cls()
+			try:
+				with open("VERSION_HISTORY.txt", "r") as f:
+					tmp = f.readlines()
+					for l in tmp:
+						if ":" not in l:
+							continue
+						v, n = l.split(":")
+						if v == version.replace("v", ""):
+							novo = n.strip()
+							break
+			except Exception as e:
+				novo = "não foi possível obter as novidades: " + e
+			print(f"pyOS {version}")
+			print(f"novidades: {novo}")
+			print()
+			print("1. atualizar")
+			print("0. voltar")
+			try:
+				op = int(input("opcao: "))
+			except:
+				print("digite um número")
+				input("pressione enter para sair...")
+			if op == 1:
+				os.remove("./syscreated.txt")
+				os.system("wget https://raw.githubusercontent.com/Miguel2729/pyOS/refs/heads/main/pyOS.py")
+				os.execv(sys.executable, [sys.executable, *sys.argv])
+			else:
+				pass
 		elif op == 0:
 			break
 		else:

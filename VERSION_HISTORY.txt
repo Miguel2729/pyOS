@@ -37,3 +37,4 @@ adições mais recentes:
 
 6.0: renomeou o comando noProtection para priv, melhorou as configurações, unificou mais o sistema, adicionou suporte há apps instalados na tela inicial,adicionou suporte a apps que iniciam junto com o sistema, removeu a dependencia do AppsInstalados, removeu o pyOS_calc desnessario, adicionou suporte mais organizado a apps instalados, e adicionou números para apps(abrir mais rápido)
 6.1: adicionou interface bonitinha para autorizar e desautorizar apps de iniciar junto com o pyOS, e fez o file manager mostrar tamanhos formatas e legíveis
+6.2: adicionou antivírus

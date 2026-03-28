@@ -13,12 +13,7 @@
    - Ou baixe o ZIP manualmente
 
 ### Windows
-1. Clique em **Code**
-2. Clique em **Download ZIP**
-3. Extraia o arquivo ZIP
-4. Instale o Python (se necessário): [python.org](https://www.python.org)
-5. Acesse a pasta extraída
-6. Execute com Python
+- use wsl
 
 ## ▶️ Executar o pyOS
 - Dentro da pasta do pyOS, execute:  

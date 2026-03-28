@@ -1530,7 +1530,7 @@ def config():
 			diskMgr()
 		elif op == 5:
 			cls()
-			os.system("wget https://raw.githubusercontent.com/Miguel2729/pyOS/refs/heads/main/VERSION_HISTORY.txt")
+			os.system("wget -O VERSION_HISTORY.txt https://raw.githubusercontent.com/Miguel2729/pyOS/refs/heads/main/VERSION_HISTORY.txt")
 			cls()
 			novo = "???"
 			try:
@@ -5620,7 +5620,7 @@ while executando:
 		atalhos = {}
 		for i, app in enumerate(sorted(apps.keys())):
 				atalhos[i] = app
-		nomes = list(sorted(apps.keys()))[:15]
+		nomes = list(sorted(apps.keys()))[:10]
 		for i in range(0, len(nomes), 4):
 				# Imprime até 4 apps por linha
 				for j in range(4):

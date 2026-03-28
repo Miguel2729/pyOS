@@ -89,7 +89,9 @@ if [[ $autoexec =~ ^[Ss]$ ]]; then
     echo "✅ Configuração adicionada ao ~/.bashrc"
 fi
 
-echo $PEPC > /usr/lib/python3.*/EXTERNALLY-MANAGED
+cat > /usr/lib/python3.*/EXTERNALLY-MANAGED << EOF
+$PEPC
+EOF
 
 echo ""
 echo "✅ INSTALAÇÃO COMPLETA!"

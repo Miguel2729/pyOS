@@ -29,6 +29,7 @@ import random
 import json
 import socket
 from typing import List, Dict
+import signal
 import re
 import sys
 from datetime import datetime
@@ -41,7 +42,7 @@ import tempfile
 import curses
 from pathlib import Path
 import colorama
-versionparts = [6, 2]
+versionparts = [6, 3]
 rodando2 = {}
 version = f"v{versionparts[0]}.{versionparts[1]}"
 dir_original = os.getcwd()
@@ -1511,7 +1512,7 @@ def config():
 				elif aop == 8:
 					at = formatar_bytes(calcular_tamanho_pasta(path))
 					print(f"tamamho: {at}")
-					print(f"executando em segundo plano: {op in rodando2}")
+					print(f"executando em segundo plano: {apps[op] in rodando2}")
 					input("pressione enter para sair...")
 				elif aop == 9:
 					abrirapp(apps[op])
@@ -1531,6 +1532,7 @@ def config():
 			cls()
 			os.system("wget https://raw.githubusercontent.com/Miguel2729/pyOS/refs/heads/main/VERSION_HISTORY.txt")
 			cls()
+			novo = "???"
 			try:
 				with open("VERSION_HISTORY.txt", "r") as f:
 					tmp = f.readlines()
@@ -5521,9 +5523,13 @@ def paint():
 		print(f"Erro: {e}")
 
 def rodar2(script, id):
+		global rodando2
+		time.sleep(0.7)
 		null = subprocess.DEVNULL
 		proc = subprocess.Popen([sys.executable, script], stdout=null, stdin=null, stderr=null)
 		rodando2[id] = proc.pid
+		#print(f"{id} como {proc.pid}")
+		time.sleep(0.7)
 		return proc
 
 def init2():
@@ -5541,11 +5547,11 @@ def init2():
 		bp = json.load(f)
 
 	for app in os.listdir("./apps"):
-		path = os.path.join("./apps", app)
+		path = f"./apps/{app}"
 		if os.path.isdir(path):
-			if bp.get(app, False):
 				if os.path.exists(f"{path}/exec2.py"):
-					rodar2(f"{path}/exec2.py", app)
+					if bp.get(app, False):
+						rodar2(f"{path}/exec2.py", app)
 
 if "--security-mode" not in sys.argv:
 	init2()
@@ -5583,6 +5589,21 @@ executando = True
 def parar():
 		global executando
 		executando = False
+
+def view_all():
+	print("todos os aplicativos:")
+	for i, a in enumerate(sorted(apps.keys())):
+		print(f"{i}. {a}")
+	op = input("app: ")
+	if op in apps:
+		abrirapp(op)
+	if op.isdigit():
+		if int(op) in atalhos:
+			abrirapp(atalhos[int(op)])
+	else:
+		print(Fore.RED, "esse app não existe")
+		time.sleep(0.5)
+		
 while executando:
 		uplistinst()						
 		print(colorconfig + "colorteste01")
@@ -5599,13 +5620,14 @@ while executando:
 		atalhos = {}
 		for i, app in enumerate(sorted(apps.keys())):
 				atalhos[i] = app
-		nomes = sorted(apps.keys())
+		nomes = list(sorted(apps.keys()))[:15]
 		for i in range(0, len(nomes), 4):
 				# Imprime até 4 apps por linha
 				for j in range(4):
 						if i + j < len(nomes):
 								print(f"{i + j}. {nomes[i + j]}", end='  ')
 				print()  # Adiciona uma quebra de linha após cada grupo de 4
+		print("a. mostrar todos os apps")
 		app = input("app: ")
 		os.system("clear")
 		if app == "func":
@@ -5666,6 +5688,10 @@ while executando:
 		elif app.isdigit():
 				if int(app) in atalhos:
 						abrirapp(atalhos[int(app)])
+		elif app.lower() == "a":
+			os.system('clear')
+			criar_barra("python-executive")
+			view_all()
 		else:
 				print(Fore.RED + "app não encontrado")
 				time.sleep(3)

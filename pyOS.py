@@ -91,14 +91,6 @@ def exception_handler(exc_type, exc_value, exc_traceback):
 
 sys.excepthook = exception_handler
 
-if not shutil.which("git"):
-		os.system("apt install git")
-		if not shutil.which("git"):
-				os.system("pacman -S git")
-		else:
-				pass
-else:
-		pass
 
 
 

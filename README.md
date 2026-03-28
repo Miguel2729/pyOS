@@ -16,7 +16,7 @@ o sistema está sob licença MIT
 | funcionalidade/grupo de funcionalidades | descrição/mais informações |
 | --------------------------------------- | -------------------------- |
 | apps | agenda, antivirus, audio, calculadora, config, controle de internet, diagnostico de rede, fotos, gerenciador de arquivos, gerenciador de tarefas, mensagens, navegador, notepad, paint, python, terminal |
-| sistema | processos em background, funções (hora, fechar, python, hostsys), gerenciador de discos (dentro do config) |
+| sistema | aplicativos, funções (hora, fechar, python, hostsys), gerenciador de discos (dentro do config) |
 | interface | interface gráfica baseada em texto sem ser só CLI, menu com números para acesso rápido |
 
 ## ❓️ porque usar pyOS?:

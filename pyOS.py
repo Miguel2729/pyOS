@@ -499,6 +499,465 @@ def formatar_bytes(bytes_valor):
 		# Remove zeros à direita e ponto se necessário
 		return f"{valor_arredondado:.2f}".rstrip('0').rstrip('.') + f" {unidades[indice]}"
 
+def antivirus():
+    """
+    Antivírus completo para pyOS
+    """
+    import hashlib
+    import sqlite3
+    from datetime import datetime, timedelta
+    
+    # Cores para output
+    RED = Fore.RED
+    GREEN = Fore.GREEN
+    YELLOW = Fore.YELLOW
+    BLUE = Fore.BLUE
+    CYAN = Fore.CYAN
+    WHITE = Fore.WHITE
+    RESET = Style.RESET_ALL
+    
+    class AntivirusEngine:
+        """Motor principal do antivírus"""
+        
+        def __init__(self):
+            self.db_path = "./pyOS/antivirus.db"
+            self.quarentena_dir = "./pyOS/quarentena"
+            self.logs_dir = "./pyOS/antivirus_logs"
+            self.whitelist_path = "./pyOS/whitelist.json"
+            self.blacklist_path = "./pyOS/blacklist.json"
+            
+            # Inicializar diretórios
+            os.makedirs(self.quarentena_dir, exist_ok=True)
+            os.makedirs(self.logs_dir, exist_ok=True)
+            
+            # Inicializar banco de dados
+            self.init_database()
+            
+            # Carregar listas
+            self.whitelist = self.load_whitelist()
+            self.blacklist = self.load_blacklist()
+        
+        def init_database(self):
+            """Inicializa banco de dados SQLite"""
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS apps (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    nome TEXT UNIQUE,
+                    caminho TEXT,
+                    hash_md5 TEXT,
+                    hash_sha256 TEXT,
+                    tamanho INTEGER,
+                    data_analise TIMESTAMP,
+                    pontuacao INTEGER,
+                    perigo TEXT,
+                    status TEXT
+                )
+            ''')
+            
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS logs (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    app_nome TEXT,
+                    data TIMESTAMP,
+                    tipo TEXT,
+                    descricao TEXT,
+                    detalhes TEXT
+                )
+            ''')
+            
+            conn.commit()
+            conn.close()
+        
+        def load_whitelist(self):
+            """Carrega lista de aplicativos confiáveis"""
+            default_whitelist = {
+                "calculadora": {"trust_level": 10, "reason": "app nativo"},
+                "notepad": {"trust_level": 10, "reason": "app nativo"},
+                "terminal": {"trust_level": 8, "reason": "app nativo com restrições"},
+                "gerenciador de arquivos": {"trust_level": 8, "reason": "app nativo"},
+                "config": {"trust_level": 9, "reason": "app nativo"},
+                "navegador": {"trust_level": 7, "reason": "acesso à internet"},
+                "gerenciador de tarefas": {"trust_level": 8, "reason": "app nativo"},
+                "mensagens": {"trust_level": 6, "reason": "comunicação P2P"},
+                "agenda": {"trust_level": 10, "reason": "app nativo"},
+                "audio": {"trust_level": 6, "reason": "acesso ao microfone"},
+                "paint": {"trust_level": 10, "reason": "app nativo"},
+                "diagnostico de rede": {"trust_level": 6, "reason": "diagnóstico"},
+                "controle de internet": {"trust_level": 7, "reason": "controle de rede"},
+                "python": {"trust_level": 5, "reason": "execução de código"}
+            }
+            
+            if os.path.exists(self.whitelist_path):
+                try:
+                    with open(self.whitelist_path, 'r', encoding='utf-8') as f:
+                        loaded = json.load(f)
+                        default_whitelist.update(loaded)
+                except:
+                    pass
+            
+            return default_whitelist
+        
+        def load_blacklist(self):
+            """Carrega lista negra"""
+            if os.path.exists(self.blacklist_path):
+                try:
+                    with open(self.blacklist_path, 'r', encoding='utf-8') as f:
+                        return json.load(f)
+                except:
+                    pass
+            return {}
+        
+        def calcular_hash(self, caminho_arquivo):
+            """Calcula hash MD5 do arquivo"""
+            if not os.path.exists(caminho_arquivo):
+                return None, None
+            
+            md5_hash = hashlib.md5()
+            sha256_hash = hashlib.sha256()
+            
+            try:
+                with open(caminho_arquivo, 'rb') as f:
+                    for chunk in iter(lambda: f.read(4096), b""):
+                        md5_hash.update(chunk)
+                        sha256_hash.update(chunk)
+                return md5_hash.hexdigest(), sha256_hash.hexdigest()
+            except:
+                return None, None
+        
+        def analisar_app(self, app_nome, caminho_app):
+            """Analisa um aplicativo"""
+            print(f"\n{CYAN}{'='*60}{RESET}")
+            print(f"{CYAN}🔍 ANALISANDO: {app_nome}{RESET}")
+            print(f"{CYAN}{'='*60}{RESET}")
+            
+            if not os.path.exists(caminho_app):
+                return {"status": "error", "message": "App não encontrado"}
+            
+            # Verificar whitelist
+            if app_nome in self.whitelist:
+                info = self.whitelist[app_nome]
+                print(f"{GREEN}✓ App na whitelist (confiável){RESET}")
+                print(f"   Nível: {info['trust_level']}/10")
+                print(f"   Motivo: {info['reason']}")
+                return {"status": "seguro", "recomendacao": "permitir"}
+            
+            # Verificar blacklist
+            if app_nome in self.blacklist:
+                print(f"{RED}⚠️ App na lista negra!{RESET}")
+                print(f"   Motivo: {self.blacklist[app_nome]}")
+                return {"status": "bloqueado", "recomendacao": "bloquear"}
+            
+            # Análise estática
+            pontuacao, problemas = self.analise_estatica(caminho_app)
+            
+            print(f"\n{BLUE}📊 Resultado da análise:{RESET}")
+            print(f"   Pontuação de risco: {pontuacao}")
+            print(f"   Problemas encontrados: {len(problemas)}")
+            
+            # Determinar resultado
+            if pontuacao >= 20:
+                status = "critico"
+                recomendacao = "quarentena"
+                mensagem = f"{RED}⚠️ ALTO RISCO DETECTADO!{RESET}"
+            elif pontuacao >= 10:
+                status = "alto_risco"
+                recomendacao = "bloquear"
+                mensagem = f"{RED}⚠️ APLICATIVO DE ALTO RISCO{RESET}"
+            elif pontuacao >= 5:
+                status = "medio_risco"
+                recomendacao = "revisar"
+                mensagem = f"{YELLOW}⚠️ COMPORTAMENTO SUSPEITO{RESET}"
+            elif pontuacao >= 2:
+                status = "baixo_risco"
+                recomendacao = "permitir_com_restricoes"
+                mensagem = f"{YELLOW}ℹ️ POUCAS SUSPEITAS{RESET}"
+            else:
+                status = "seguro"
+                recomendacao = "permitir"
+                mensagem = f"{GREEN}✓ APARENTEMENTE SEGURO{RESET}"
+            
+            print(f"\n{mensagem}")
+            print(f"Status: {status.upper()}")
+            print(f"Recomendação: {recomendacao}")
+            
+            if problemas:
+                print(f"\n{YELLOW}📋 Problemas encontrados:{RESET}")
+                for p in problemas[:5]:
+                    print(f"   • {p}")
+            
+            return {
+                "status": status,
+                "pontuacao": pontuacao,
+                "problemas": problemas,
+                "recomendacao": recomendacao
+            }
+        
+        def analise_estatica(self, caminho_app):
+            """Análise estática do código"""
+            pontuacao = 0
+            problemas = []
+            
+            # Padrões perigosos
+            padroes = [
+                (r"os\.system\s*\(", "os.system", 3),
+                (r"subprocess\.(call|Popen|run)\s*\(", "subprocess", 3),
+                (r"eval\s*\(", "eval", 4),
+                (r"exec\s*\(", "exec", 4),
+                (r"__import__\s*\(", "__import__ dinâmico", 2),
+                (r"shutil\.rmtree\s*\(", "shutil.rmtree", 2),
+                (r"os\.remove\s*\(", "os.remove", 1),
+                (r"socket\.(connect|bind|listen)\s*\(", "socket", 2),
+                (r"requests\.(get|post)\s*\(", "requests", 1),
+                (r"pickle\.loads?\s*\(", "pickle.load", 3),
+                (r"base64\.b64decode\s*\(", "base64 decode", 2),
+                (r"open\s*\([^)]*['\"]w['\"]", "write file", 1),
+            ]
+            
+            # Comandos críticos
+            comandos = [
+                ("rm -rf /", 10),
+                ("rm -rf --no-preserve-root", 10),
+                ("mkfs", 10),
+                ("dd if=/dev/zero", 9),
+                (":(){ :|:& };:", 10),
+                ("shutdown", 7),
+                ("poweroff", 7),
+            ]
+            
+            # Percorrer arquivos
+            for root, dirs, files in os.walk(caminho_app):
+                for file in files:
+                    if file.endswith('.py'):
+                        caminho = os.path.join(root, file)
+                        
+                        try:
+                            with open(caminho, 'r', encoding='utf-8') as f:
+                                conteudo = f.read()
+                            
+                            # Verificar padrões
+                            for padrao, nome, peso in padroes:
+                                if re.search(padrao, conteudo, re.IGNORECASE):
+                                    pontuacao += peso
+                                    problemas.append(f"{nome} em {file} (+{peso})")
+                            
+                            # Verificar comandos
+                            for comando, peso in comandos:
+                                if comando in conteudo:
+                                    pontuacao += peso
+                                    problemas.append(f"Comando crítico em {file}: {comando} (+{peso})")
+                        
+                        except Exception as e:
+                            problemas.append(f"Erro ao ler {file}: {e}")
+            
+            return pontuacao, problemas
+        
+        def quarentena(self, app_nome, caminho_app):
+            """Move app para quarentena"""
+            destino = os.path.join(self.quarentena_dir, app_nome)
+            if os.path.exists(caminho_app):
+                shutil.move(caminho_app, destino)
+                print(f"{GREEN}✓ App movido para quarentena{RESET}")
+                return True
+            return False
+        
+        def listar_quarentena(self):
+            """Lista apps em quarentena"""
+            if not os.path.exists(self.quarentena_dir):
+                return []
+            return [d for d in os.listdir(self.quarentena_dir) 
+                   if os.path.isdir(os.path.join(self.quarentena_dir, d))]
+        
+        def restaurar_quarentena(self, app_nome):
+            """Restaura app da quarentena"""
+            origem = os.path.join(self.quarentena_dir, app_nome)
+            destino = os.path.join("./apps", app_nome)
+            if os.path.exists(origem):
+                shutil.move(origem, destino)
+                print(f"{GREEN}✓ App restaurado da quarentena{RESET}")
+                return True
+            return False
+        
+        def menu_interativo(self):
+            """Menu interativo"""
+            while True:
+                os.system('clear')
+                print(f"\n{CYAN}{'='*60}{RESET}")
+                print(f"{CYAN}🛡️  ANTIVÍRUS pyOS{RESET}")
+                print(f"{CYAN}{'='*60}{RESET}")
+                print(f"\n{WHITE}Opções:{RESET}")
+                print("  1. Analisar app específico")
+                print("  2. Analisar todos os apps")
+                print("  3. Ver quarentena")
+                print("  4. Restaurar da quarentena")
+                print("  5. Ver relatório")
+                print("  6. Adicionar à whitelist")
+                print("  7. Adicionar à blacklist")
+                print("  0. Sair")
+                
+                opcao = input(f"\n{CYAN}Escolha: {RESET}").strip()
+                
+                if opcao == "1":
+                    os.system('clear')
+                    print(f"\n{BLUE}Apps disponíveis:{RESET}")
+                    
+                    apps_list = []
+                    if os.path.exists("./apps"):
+                        apps_list = [d for d in os.listdir("./apps") 
+                                   if os.path.isdir(os.path.join("./apps", d))]
+                    
+                    for i, app in enumerate(apps_list, 1):
+                        print(f"  {i}. {app}")
+                    
+                    if not apps_list:
+                        print("  Nenhum app encontrado")
+                        input("\nPressione Enter...")
+                        continue
+                    
+                    escolha = input(f"\nNome ou número: ").strip()
+                    
+                    if escolha.isdigit():
+                        idx = int(escolha) - 1
+                        if 0 <= idx < len(apps_list):
+                            app_nome = apps_list[idx]
+                        else:
+                            print(f"{RED}App não encontrado{RESET}")
+                            time.sleep(1)
+                            continue
+                    else:
+                        app_nome = escolha
+                    
+                    caminho = os.path.join("./apps", app_nome)
+                    if os.path.exists(caminho):
+                        resultado = self.analisar_app(app_nome, caminho)
+                        
+                        if resultado.get("recomendacao") == "quarentena":
+                            confirmar = input(f"\n{RED}Colocar em quarentena? (s/n): {RESET}")
+                            if confirmar.lower() == 's':
+                                self.quarentena(app_nome, caminho)
+                    else:
+                        print(f"{RED}App não encontrado{RESET}")
+                        time.sleep(1)
+                    
+                    input(f"\n{YELLOW}Pressione Enter...{RESET}")
+                
+                elif opcao == "2":
+                    print(f"\n{BLUE}Analisando todos os apps...{RESET}")
+                    
+                    if os.path.exists("./apps"):
+                        apps_list = [d for d in os.listdir("./apps") 
+                                   if os.path.isdir(os.path.join("./apps", d))]
+                        
+                        for i, app in enumerate(apps_list, 1):
+                            print(f"\n[{i}/{len(apps_list)}] Analisando: {app}")
+                            caminho = os.path.join("./apps", app)
+                            self.analisar_app(app, caminho)
+                            time.sleep(0.5)
+                    
+                    print(f"\n{GREEN}Análise concluída!{RESET}")
+                    input(f"\n{YELLOW}Pressione Enter...{RESET}")
+                
+                elif opcao == "3":
+                    quarentena = self.listar_quarentena()
+                    if quarentena:
+                        print(f"\n{BLUE}Apps em quarentena:{RESET}")
+                        for i, app in enumerate(quarentena, 1):
+                            print(f"  {i}. {app}")
+                    else:
+                        print(f"\n{GREEN}Nenhum app em quarentena{RESET}")
+                    input(f"\n{YELLOW}Pressione Enter...{RESET}")
+                
+                elif opcao == "4":
+                    quarentena = self.listar_quarentena()
+                    if quarentena:
+                        print(f"\n{BLUE}Apps em quarentena:{RESET}")
+                        for i, app in enumerate(quarentena, 1):
+                            print(f"  {i}. {app}")
+                        
+                        escolha = input(f"\nNúmero para restaurar: ").strip()
+                        if escolha.isdigit():
+                            idx = int(escolha) - 1
+                            if 0 <= idx < len(quarentena):
+                                self.restaurar_quarentena(quarentena[idx])
+                    else:
+                        print(f"\n{GREEN}Nenhum app em quarentena{RESET}")
+                    input(f"\n{YELLOW}Pressione Enter...{RESET}")
+                
+                elif opcao == "5":
+                    print(f"\n{CYAN}{'='*60}{RESET}")
+                    print(f"{CYAN}📊 RELATÓRIO{RESET}")
+                    print(f"{CYAN}{'='*60}{RESET}")
+                    
+                    # Contar apps
+                    total = 0
+                    if os.path.exists("./apps"):
+                        total = len([d for d in os.listdir("./apps") 
+                                   if os.path.isdir(os.path.join("./apps", d))])
+                    
+                    quarentena = self.listar_quarentena()
+                    
+                    print(f"\n{BLUE}Estatísticas:{RESET}")
+                    print(f"  Apps instalados: {total}")
+                    print(f"  Apps em quarentena: {len(quarentena)}")
+                    print(f"  Apps na whitelist: {len(self.whitelist)}")
+                    print(f"  Apps na blacklist: {len(self.blacklist)}")
+                    
+                    input(f"\n{YELLOW}Pressione Enter...{RESET}")
+                
+                elif opcao == "6":
+                    app_nome = input(f"\nNome do app: ").strip()
+                    motivo = input("Motivo: ").strip()
+                    nivel = input("Nível (1-10): ").strip()
+                    
+                    try:
+                        nivel = int(nivel)
+                        if 1 <= nivel <= 10:
+                            self.whitelist[app_nome] = {
+                                "trust_level": nivel,
+                                "reason": motivo,
+                                "data": datetime.now().isoformat()
+                            }
+                            with open(self.whitelist_path, 'w', encoding='utf-8') as f:
+                                json.dump(self.whitelist, f, indent=2, ensure_ascii=False)
+                            print(f"{GREEN}✓ Adicionado à whitelist{RESET}")
+                        else:
+                            print(f"{RED}Nível inválido{RESET}")
+                    except:
+                        print(f"{RED}Entrada inválida{RESET}")
+                    
+                    time.sleep(1)
+                
+                elif opcao == "7":
+                    app_nome = input(f"\nNome do app: ").strip()
+                    motivo = input("Motivo: ").strip()
+                    
+                    self.blacklist[app_nome] = motivo
+                    with open(self.blacklist_path, 'w', encoding='utf-8') as f:
+                        json.dump(self.blacklist, f, indent=2, ensure_ascii=False)
+                    
+                    print(f"{RED}✓ Adicionado à blacklist{RESET}")
+                    time.sleep(1)
+                
+                elif opcao == "0":
+                    print(f"\n{GREEN}👋 Saindo...{RESET}")
+                    break
+                
+                else:
+                    print(f"{RED}Opção inválida{RESET}")
+                    time.sleep(1)
+    
+    # Executar
+    try:
+        av = AntivirusEngine()
+        av.menu_interativo()
+    except KeyboardInterrupt:
+        print(f"\n\n{YELLOW}Interrompido{RESET}")
+    except Exception as e:
+        print(f"\n{RED}Erro: {e}{RESET}")
+        traceback.print_exc()
+        input("Pressione Enter...")
 
 
 def diskMgr():
@@ -954,7 +1413,7 @@ def config():
 		print("2. aplicativos")
 		print("3. desinstalar o pyOS")
 		print("4. gerenciar discos")
-		print("outro. sair")
+		print("outro/0. sair")
 		print()
 		try:
 			op = int(input("opção: "))
@@ -999,7 +1458,7 @@ def config():
 				cls()
 				path = f"{os.getcwd()}/apps/{apps[op]}"
 				wpath = f"{os.getcwd()}/workspace/{apps[op]}"
-				print(f"config {apps[op]}")
+				print(f"config - {apps[op]}")
 				print("1. ver informações de espaço")
 				print("2. limpar dados")
 				print("3. desinstalar")
@@ -1071,6 +1530,8 @@ def config():
 			os.system('clear')
 			criar_barra("disk manager")
 			diskMgr()
+		elif op == 0:
+			break
 		else:
 			break
 
@@ -5056,7 +5517,9 @@ def init2():
 			if bp.get(app, False):
 				if os.path.exists(f"{path}/exec2.py"):
 					rodar2(f"{path}/exec2.py", app)
-init2()
+
+if "--security-mode" not in sys.argv:
+	init2()
 
 apps = {
 	"calculadora": calculadora,
@@ -5074,6 +5537,7 @@ apps = {
 	"python": python3,
 	"audio": audio,
 	"paint": paint,
+	"antivirus": antivirus
 }
 
 def uplistinst():

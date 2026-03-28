@@ -9,7 +9,7 @@ o sistema está sobe licença MIT
 ### python:
 - [python.org](https://python.org)
 ### git:
-- [pyOS](https://github.com/Miguel2729/pyOS.git)
+- [pyOS git](https://github.com/Miguel2729/pyOS.git)
 
 ## ⚙️ funcionalidades:
 | funcionalidade/grupo de funcionalidades | descrição/mais informações |
@@ -18,29 +18,9 @@ o sistema está sobe licença MIT
 | sistema | processos em background, funções(hora, fechar, Python, hostsys) |
 | interface | interface gráfica baseada em texto sem ser só CLI, compatível com terminal e ide |
 
-## 🔴🟡🟢 consumo de ram aproximado:
-| ação | consumo aproximado |
-| ---------------------- | --------------- |
-| em repouso | **90-160 MB** |
-| com 1-2 apps abertos | **160-280 MB** |
-| com vários apps abertos + navegador | **280-550 MB** |
-| máximo | **400-650 MB** |
-| uso normal | **220-380 MB** |
 
-## 📥 instalação rápida:
-```bash
-# instalar pacotes
-apt install git
-apt install python3
 
-# clonar os arquivos
-git clone https://github.com/Miguel2729/pyOS.git
 
-# acessar a pasta
-cd pyOS
-# executar o pyOS
-python3 pyOS.py
-```
 ## ❓️ porque usar pyOS?:
 - apenas 512 MB de ram para experiência boa o pyOS precisa(no momento(5.15)
 - não é só CLI

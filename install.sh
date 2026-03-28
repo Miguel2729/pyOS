@@ -37,6 +37,8 @@ else
     exit 1
 fi
 
+PEPC=$(cat /usr/lib/python3.*/EXTERNALLY-MANAGED)
+
 rm -f /usr/lib/python3.*/EXTERNALLY-MANAGED
 
 # Clonar ou atualizar pyOS
@@ -86,6 +88,8 @@ if [[ $autoexec =~ ^[Ss]$ ]]; then
     echo -e "cd $HOME/pyOS\npython3 pyOS.py" >> ~/.bashrc
     echo "✅ Configuração adicionada ao ~/.bashrc"
 fi
+
+echo $PEPC > /usr/lib/python3.*/EXTERNALLY-MANAGED
 
 echo ""
 echo "✅ INSTALAÇÃO COMPLETA!"

@@ -20,7 +20,7 @@ o sistema está sob licença MIT
 | interface | interface gráfica baseada em texto sem ser só CLI, menu com números para acesso rápido |
 
 ## ❓️ porque usar pyOS?:
-- recomendado 1 GB de ram para usar todos os apps sem travamentos
+- recomendado 1 GB ou mais de ram para usar todos os apps sem travamentos
 - não é só CLI
 - tem interface gráfica baseada em texto
 - funciona em sistemas operacionais com só terminal, terminal normal e IDE
@@ -33,7 +33,7 @@ o sistema está sob licença MIT
 | difícil de usar | fácil de usar |
 
 ### 📺 interface do pyOS copiada e colada:
-%%%text
+```text
 python-executive                  _ ⛶ X
 =python==hora==fechar==hostsys=
 
@@ -44,7 +44,7 @@ apps:
 10. mensagens      11. navegador       12. notepad        13. paint
 14. python         15. terminal
 app:
-%%%
+```
 
 ## 🖼 fotos:
 ![foto](foto1.png) ![foto](foto2.png) ![foto](foto3.png) ![foto](foto4.png)

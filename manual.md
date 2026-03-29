@@ -13,7 +13,7 @@
    - Ou baixe o ZIP manualmente
 
 ### Windows
-- use wsl
+- use WSL
 
 ## ▶️ Executar o pyOS
 - Dentro da pasta do pyOS, execute:  

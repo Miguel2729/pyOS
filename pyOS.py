@@ -42,7 +42,7 @@ import tempfile
 import curses
 from pathlib import Path
 import colorama
-versionparts = [6, 3]
+versionparts = [6, 4]
 rodando2 = {}
 version = f"v{versionparts[0]}.{versionparts[1]}"
 dir_original = os.getcwd()
@@ -308,39 +308,48 @@ except Exception as e:
 
 # aplicativos
 def calculadora():
-		print("operadores:")
-		print("divisão: /")
-		print("multiplicação: *")
-		print("somar: +")
-		print("subtrair: -")
-		print("divisão inteira: //")
-		print("potencia: **")
-		print('resto de divisao: %')
 		try:
-				# apenas numeros
-				n1 = float(input("numero 1: "))
-				n2 = float(input("numero 2: "))
+			n1 = float(input("número 1: "))
+			n2 = float(input("número 2: "))
 		except ValueError:
-				print("não é número")
-				time.sleep(5)
-				return
-		op = input("operador matematico: ")
-		# sem divisão por zero
-		if  n2 == 0 and op in ["/", "//", "%"]:
-				print("erro de divisão por zero")
-				time.sleep(5)
-				return
-		# apenas operadores validos
-		elif op == "/" or op == "*" or op == "+" or op == "-" or op == "//" or op == "**" or op == "%":
-				res = eval(f"{n1} {op} {n2}")
-				if str(res).endswith(".0"):
-						res = int(res)
-				print(res)
-		else:
-				print("operador invalído!")
+			print("não é número")
+			input("pressione enter para sair")
+			return
+		print()
+		print("1. adição")
+		print("2. subtração")
+		print("3. multiplicação")
+		print("4. divisão")
+		print("5. potência")
+		print("6. divisão inteira")
+		print("7. resto de divisão")
+		try:
+			op = int(input("número do operador: "))
+			if not(1 <= op <= 7):
+				raise ValueError()
+		except ValueError:
+			print("não é uma opção válido")
+			input("pressione enter para sair")
+			return
+		ops = {
+		1: lambda a, b: a + b,
+		2: lambda a, b: a - b,
+		3: lambda a, b: a * b,
+		4: lambda a, b: a / b,
+		5: lambda a, b: a ** b,
+		6: lambda a, b: a // b,
+		7: lambda a, b: a % b
+		}
+		
+		try:
+			r = ops[op](n1, n2)
+		except:
+			r = "NaN"
+		str(r)
+		if str(r).endswith(".0"):
+			r = int(r)
+		print(r)
 		input("pressione enter para sair")
-		# impossivel injetar codigo, quem falar que pode não olhou o codigo direito
-
 def notepad():
 	# Criar diretório de notas se não existir
 	notes_dir = "./notes"

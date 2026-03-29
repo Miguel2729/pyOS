@@ -5,7 +5,7 @@
 ### Linux
 1. Verifique a versão do Python:  
    - `python --version` ou `python3 --version`  
-   - Deve ser 3.6 ou superior
+   - Deve ser 3.8 ou superior
 2. Navegue até o diretório desejado:  
    - `cd [caminho desejado para o pyOS]`
 3. Baixe o pyOS:

@@ -92,6 +92,7 @@ O pyOS inclui um terminal **com propósito específico**:
 | ✅ **Comandos úteis liberados** - cd, ls, python -m http.server, etc. | ⚠️ **Todos os comandos** - Inclusive os perigosos |
 | 🛡️ **Proteção automática** - Bloqueia comandos perigosos | ❌ **Sem proteção** - Usuário assume todos os riscos |
 | 🔄 **Volta fácil** - Digite quit para voltar ao pyOS | 🔒 **Única opção** - Se errar, pode danificar o sistema |
+| tem o comando priv se precisar ignorar as proteções | tudo é privilégiado |
 
 ### 💡 **Como funciona na prática:**
 - **No pyOS**: Digite terminal → Use com segurança → Digite quit para voltar
@@ -104,7 +105,7 @@ O pyOS inclui um terminal **com propósito específico**:
 
 🔐 **Segurança + Liberdade = Você escolhe quando precisa de cada uma!**
 
-⌨️ **os comandos são os mesmos do sistema operacional hospedeiro, se for Windows vai usar comandos de Windows se for Linux vai usar comandos de Linux**
+⌨️ **os comandos são os mesmos do sistema operacional hospedeiro, se for Windows vai usar comandos de Windows(improvável, pyOS não suporta windows, a nao ser que você faça uma boa gambiarra ou modifique o código do pyOS ) se for linux vai usar comandos de Linux**
 
 ## porque o menu principal fala python-executive e não pyOS? 
 - pyOS fica muito cru
@@ -143,30 +144,5 @@ pyOS não é um sistema operacional simulado e não tem essa intenção, ele é 
 | 14 | python | Ambiente Python com editor e gerenciador de pacotes |
 | 15 | terminal | Terminal com proteções de segurança |
 
-## 🆕 Novidades da v6.2
-
-### ✨ Novos Aplicativos
-- **antivirus**: Análise de segurança de apps com whitelist/blacklist
-- **audio**: Gravação e reprodução de áudio via microfone
-- **paint**: Editor de desenho ASCII com suporte a cores
-- **controle de internet**: Gerenciamento de conexão
-- **diagnostico de rede**: Ferramenta de troubleshooting
-
-### 🔧 Melhorias
-- Gerenciador de discos integrado no config
-- Editor Python com execução de código
-- Menu com números para acesso rápido (0-15)
-- Tratamento de erros aprimorado
-
-## 📊 Requisitos de RAM
-
-| Versão | RAM Mínima | RAM Recomendada | Apps |
-|--------|-----------|-----------------|------|
-| v6.2 | 1 GB | 1 GB | 16 apps |
-
-## 🔒 Segurança
-- Senha opcional na inicialização
-- Bloqueio de comandos perigosos no terminal (rm -rf /, shutdown, etc.)
-- Acesso restrito a arquivos do sistema (/etc/passwd, /root/, etc.)
-- Antivírus integrado para verificar apps
-- Processos em background isolados
+⚠️ atenção: compatibilidade
+pyOS não roda em windows, para rodar no windows use WSL

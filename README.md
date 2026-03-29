@@ -105,7 +105,7 @@ O pyOS inclui um terminal **com propósito específico**:
 
 🔐 **Segurança + Liberdade = Você escolhe quando precisa de cada uma!**
 
-⌨️ **os comandos são os mesmos do sistema operacional hospedeiro, se for Windows vai usar comandos de Windows(improvável, pyOS não suporta windows, a nao ser que você faça uma boa gambiarra ou modifique o código do pyOS ) se for linux vai usar comandos de Linux**
+⌨️ **os comandos são os mesmos do sistema operacional hospedeiro, se for Windows vai usar comandos de Windows(improvável, pyOS não suporta windows, exceto se você fazer uma gambiarra ou modificar profundamente o pyOS) se for linux vai usar comandos de Linux**
 
 ## porque o menu principal fala python-executive e não pyOS? 
 - pyOS fica muito cru

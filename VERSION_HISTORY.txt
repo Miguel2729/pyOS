@@ -39,3 +39,4 @@ adições mais recentes:
 6.1: adicionou interface bonitinha para autorizar e desautorizar apps de iniciar junto com o pyOS, e fez o file manager mostrar tamanhos formatas e legíveis
 6.2: adicionou antivírus
 6.3: encurtou a lista limitando ela a 10 apps e uma opção "mostrar todos os apps", corrigiu o rodar2() e as configurações
+6.4: atualizou a calculadora para ser mais intuitiva e sem eval()

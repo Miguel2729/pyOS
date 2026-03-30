@@ -2680,7 +2680,7 @@ def atualizar_sistema():
 		# Rollback
 		if os.path.exists(backup_dir):
 			print(f"{Fore.GREEN}✓ Versão atual preservada{Fore.RESET}")
-		
+		input("pressione enter para sair...")
 		return
 	
 	# === 8. SUBSTITUIR ARQUIVO ===

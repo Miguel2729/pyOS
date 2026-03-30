@@ -2258,8 +2258,10 @@ def terminal():
 			apps["system-mgr"] = sysmgr
 			print("system-mgr unlocked")
 		elif coman.startswith("priv "):
-			os.system(coman[len("priv "):])
-
+			if verificar_senha():
+				os.system(coman[len("priv "):])
+			else:
+				print("senha incorreta")
 
 		else:
 			# Lista de comandos perigosos bloqueados

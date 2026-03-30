@@ -1,6 +1,6 @@
 {
 "version": "6.8",
 "sha256": "ac15146532861e5fb27e6683a6d72db604e3d8f8eb014e008f5dd5d9f332f3e4",
-"changelog": "deu liberdade ao terminal(agora só tem avisos) e melhorou a segurança das atualizações"
+"changelog": "melhorou o antivírus e adicionou verificação de versao já atualizada nas atualizações"
 
 }

@@ -5,9 +5,10 @@ Handler para arquivos .ppk - Abre o instalador com o arquivo selecionado
 
 import os
 import sys
+from pathlib import Path
 
 # Adicionar diretório do app ao path
-app_dir = os.path.dirname(os.path.abspath(__file__))
+app_dir = Path(os.getcwd()).parent.parent / "apps" / "instalador de apps"
 sys.path.insert(0, app_dir)
 
 def main():

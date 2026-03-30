@@ -41,4 +41,5 @@ adições mais recentes:
 6.3: encurtou a lista limitando ela a 10 apps e uma opção "mostrar todos os apps", corrigiu o rodar2() e as configurações
 6.4: atualizou a calculadora para ser mais intuitiva e sem eval()
 6.5: melhorou a segurança do pyOS, melhorando o antivírus e o sistema de senha
-6.5: corrigiu o instalador de apps, adicionou senha ao priv
+6.6: corrigiu o instalador de apps, adicionou senha ao priv
+6.7: deu liberdade ao terminal(agora só tem avisos) e melhorou a segurança das atualizações

@@ -2605,12 +2605,16 @@ def atualizar_sistema():
 	# === 5. BACKUP DA VERSÃO ATUAL ===
 	print(f"\n{Fore.YELLOW}📦 Criando backup da versão atual...{Fore.RESET}")
 	backup_dir = "./pyOS_backup_version"
+	os.makedirs(backup_dir, exist_ok=True)
+
 	try:
 		if os.path.exists(backup_dir):
 			shutil.rmtree(backup_dir)
+			os.makedirs(backup_dir, exist_ok=True)
+
 		
 		# Backup apenas do arquivo principal
-		shutil.copy2("pyOS.py", f"{backup_dir}/pyOS.py.backup")
+		shutil.copy2("./pyOS.py", f"{backup_dir}/pyOS.py.backup")
 		with open(f"{backup_dir}/version.txt", "w") as f:
 			f.write(version)
 		

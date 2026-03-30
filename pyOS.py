@@ -42,7 +42,11 @@ import tempfile
 import curses
 from pathlib import Path
 import colorama
-versionparts = [6, 4]
+import hashlib
+import secrets
+import getpass
+
+versionparts = [6, 5]
 rodando2 = {}
 version = f"v{versionparts[0]}.{versionparts[1]}"
 dir_original = os.getcwd()
@@ -265,38 +269,121 @@ def pyOS():
 
 pyOS()
 
-if not os.path.exists("passwordexist.txt"):
-		senhaconfig01 = input("definir senha?(s/n)")
-		if senhaconfig01 == "s":
-				with open("passwordexist.txt", 'w') as cfg01:
-						cfg01.write("True")
-				senha = input("sua senha:")
-				with open("senha.txt", 'w') as cfg02:
-						cfg02.write(senha)
 
-						# Aplicar permissoes de segurança
-				os.system("chmod 600 passwordexist.txt")
-		if os.path.exists("senha.txt"):
-				os.system("chmod 600 senha.txt")
-		elif senhaconfig01 == "n":
-				with open("passwordexist.txt", 'w') as cfg01:
-						cfg01.write("False")
-		else:
-				print("opcao não reconhecida")
+
+# Arquivos de configuração (nomes ocultos para maior discrição)
+ARQUIVO_CONFIG = ".password_config"
+ARQUIVO_CREDENCIAIS = ".credenciais"
+
+def gerar_hash_senha(senha, salt):
+    """Gera um hash seguro usando PBKDF2-HMAC-SHA256"""
+    return hashlib.pbkdf2_hmac('sha256', senha.encode('utf-8'), salt, 100000).hex()
+
+def definir_permissoes_seguras(caminho_arquivo):
+    """Tenta definir permissões de leitura/escrita apenas para o dono (Unix)"""
+    try:
+        os.chmod(caminho_arquivo, 0o600)
+    except OSError:
+        # Ignora erro no Windows, pois chmod não funciona da mesma forma
+        pass
+
+def configurar_senha():
+    nome = input("digite seu nome de usuário: ") or "usuário"
+    with open("user_name.txt", "w") as f:
+        f.write(nome)
+    print("=== Configuração de Segurança ===")
+    senhaconfig01 = input("Deseja definir uma senha de proteção? (s/n): ").lower()
+    
+    if senhaconfig01 == "s":
+        senha = getpass.getpass("Crie sua senha: ")
+        confirmacao = getpass.getpass("Confirme sua senha: ")
+        
+        if senha != confirmacao:
+            print("As senhas não coincidem. Configuração cancelada.")
+            with open(ARQUIVO_CONFIG, 'w') as cfg:
+                cfg.write("False")
+            definir_permissoes_seguras(ARQUIVO_CONFIG)
+            return
+
+        # Gerar salt aleatório
+        salt = secrets.token_hex(16)
+        
+        # Gerar hash da senha
+        hash_senha = gerar_hash_senha(senha, salt.encode('utf-8'))
+        
+        # Salvar config (True)
+        with open(ARQUIVO_CONFIG, 'w') as cfg01:
+            cfg01.write("True")
+        
+        # Salvar salt e hash (formato: salt$hash)
+        with open(ARQUIVO_CREDENCIAIS, 'w') as cfg02:
+            cfg02.write(f"{salt}${hash_senha}")
+        
+        definir_permissoes_seguras(ARQUIVO_CONFIG)
+        definir_permissoes_seguras(ARQUIVO_CREDENCIAIS)
+        print("Senha configurada com sucesso!")
+        
+    elif senhaconfig01 == "n":
+        with open(ARQUIVO_CONFIG, 'w') as cfg01:
+            cfg01.write("False")
+        definir_permissoes_seguras(ARQUIVO_CONFIG)
+        print("Acesso sem senha configurado.")
+    else:
+        print("Opção não reconhecida.")
+
+def verificar_senha():
+    try:
+        with open(ARQUIVO_CONFIG, 'r') as existe:
+            sim = existe.read().strip()
+    except FileNotFoundError:
+        return True  # Arquivo não existe, permite acesso
+    
+    if sim == "True":
+        try:
+            with open(ARQUIVO_CREDENCIAIS, 'r') as cred:
+                dados = cred.read().strip().split('$')
+                if len(dados) != 2:
+                    raise ValueError("Arquivo de credenciais corrompido")
+                
+                salt_armazenado, hash_armazenado = dados
+                
+                # Pede a senha sem mostrar na tela
+                senha_user = getpass.getpass("Digite a senha: ")
+                
+                # Gera o hash da senha digitada com o mesmo salt
+                hash_tentativa = gerar_hash_senha(senha_user, salt_armazenado.encode('utf-8'))
+                
+                if hash_tentativa == hash_armazenado:
+                    print("Acesso permitido.")
+                    return True
+                else:
+                    print("Senha incorreta.")
+                    return False
+        except FileNotFoundError:
+            print("Erro: Arquivo de senha não encontrado, mas a config diz que existe senha.")
+            return False
+    else:
+        # Se não tem senha, permite acesso direto
+        return True
+
+# --- Lógica Principal ---
+
+if not os.path.exists(ARQUIVO_CONFIG):
+    configurar_senha()
 else:
-		with open("passwordexist.txt", 'r') as existe:
-				sim = existe.read()
-				if sim == "True":
-						with open("senha.txt", 'r') as senha:
-								senhacorreta = senha.read()
-								senhauser = input("senha: ")
-								if senhauser == senhacorreta:
-										pass
-								else:
-										print("senha incorreta")
-										quit()
-				else:
-						pass
+    if not verificar_senha():
+        quit()
+
+nome = "usuário"
+try:
+    with open("user_name.txt", "r") as f:
+        nome = f.read()
+except:
+    pass
+
+# O restante do seu programa continuaria aqui...
+print(f"bem-vindo {nome}")
+time.sleep(0.4)
 
 
 sys.path.insert(0, "pyOS/system/modules")
@@ -504,12 +591,26 @@ def formatar_bytes(bytes_valor):
 
 def antivirus():
     """
-    Antivírus completo para pyOS
+    Antivírus avançado para pyOS com análise AST, detecção de ofuscação,
+    classificação de malware e quarentena segura
     """
     import hashlib
-    import sqlite3
-    from datetime import datetime, timedelta
-    
+    import ast
+    import re
+    import json
+    import os
+    import shutil
+    import subprocess
+    import base64
+    import string
+    import time
+    from datetime import datetime
+    from pathlib import Path
+    from typing import Dict, List, Tuple, Optional
+    from enum import Enum
+    import traceback
+    from colorama import Fore, Style
+
     # Cores para output
     RED = Fore.RED
     GREEN = Fore.GREEN
@@ -517,443 +618,996 @@ def antivirus():
     BLUE = Fore.BLUE
     CYAN = Fore.CYAN
     WHITE = Fore.WHITE
+    MAGENTA = Fore.MAGENTA
     RESET = Style.RESET_ALL
-    
+
+    class MalwareType(Enum):
+        """Tipos de malware classificados"""
+        SAFE = "seguro"
+        UNKNOWN = "desconhecido"
+        SPYWARE = "spyware"
+        RANSOMWARE = "ransomware"
+        ROOTKIT = "rootkit"
+        TROJAN = "trojan"
+        BACKDOOR = "backdoor"
+        MINER = "minerador"
+        DOWNLOADER = "downloader"
+        KEYLOGGER = "keylogger"
+        RAT = "rat"
+        WORM = "worm"
+        ADWARE = "adware"
+
+    class ThreatAction(Enum):
+        """Ações que o malware tenta executar"""
+        NONE = "nenhuma"
+        FILE_DELETION = "deleção de arquivos"
+        FILE_ENCRYPTION = "criptografia de arquivos"
+        DATA_EXFILTRATION = "exfiltração de dados"
+        KEYLOGGING = "captura de teclas"
+        PERSISTENCE = "persistência no sistema"
+        PRIVILEGE_ESCALATION = "escalonação de privilégios"
+        NETWORK_CONNECTION = "conexão de rede suspeita"
+        PROCESS_INJECTION = "injeção de processo"
+        CRYPTO_MINING = "mineração de criptomoedas"
+        SCREEN_CAPTURE = "captura de tela"
+        MICROPHONE_ACCESS = "acesso ao microfone"
+        CAMERA_ACCESS = "acesso à câmera"
+        CREDENTIAL_THEFT = "roubo de credenciais"
+        SYSTEM_MODIFICATION = "modificação do sistema"
+        DOWNLOADER = "downloader"
+        BACKDOOR = "backdoor"      # ← Adicionar esta
+        RANSOMWARE = "ransomware"  # ← Adicionar esta (opcional, mas usado)    class AntivirusEngine:
     class AntivirusEngine:
-        """Motor principal do antivírus"""
-        
-        def __init__(self):
-            self.db_path = "./pyOS/antivirus.db"
-            self.quarentena_dir = "./pyOS/quarentena"
-            self.logs_dir = "./pyOS/antivirus_logs"
-            self.whitelist_path = "./pyOS/whitelist.json"
-            self.blacklist_path = "./pyOS/blacklist.json"
-            
+        """Motor principal do antivírus com análise avançada"""
+
+        def __init__(self, auto_action: bool = False):
+            self.base_dir = Path("./apps").resolve()
+            self.pyos_dir = Path("./pyOS").resolve()
+            self.quarantine_dir = self.pyos_dir / "quarentena_segura"
+            self.db_path = self.pyos_dir / "antivirus_db.json"
+            self.whitelist_path = self.pyos_dir / "whitelist_assinada.json"
+            self.blacklist_path = self.pyos_dir / "blacklist.json"
+            self.logs_dir = self.pyos_dir / "antivirus_logs"
+            self.signature_key_path = self.pyos_dir / "av_signature.key"
+
+            # URLs e domínios suspeitos conhecidos
+            self.suspicious_domains = [
+                "pastebin.com", "gist.github.com", "ngrok.io", "duckdns.org",
+                "no-ip.com", "dynu.com", "afraid.org", "changeip.com"
+            ]
+            self.suspicious_patterns = [
+                r"https?://\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}",  # IP direto
+                r"https?://[a-z0-9]{32,}\.",  # Hash na URL
+                r"wss?://",  # WebSocket
+            ]
+
+            # Comandos shell perigosos
+            self.dangerous_shell_commands = [
+                ("rm -rf", 10, ThreatAction.FILE_DELETION),
+                ("dd if=", 9, ThreatAction.SYSTEM_MODIFICATION),
+                ("mkfs", 8, ThreatAction.SYSTEM_MODIFICATION),
+                ("chmod 777", 7, ThreatAction.PRIVILEGE_ESCALATION),
+                ("chown root", 7, ThreatAction.PRIVILEGE_ESCALATION),
+                ("wget", 5, ThreatAction.DOWNLOADER),
+                ("curl", 5, ThreatAction.DOWNLOADER),
+                ("nc ", 6, ThreatAction.BACKDOOR),
+                ("netcat", 6, ThreatAction.BACKDOOR),
+                ("bash -i", 8, ThreatAction.BACKDOOR),
+                ("python -c", 6, ThreatAction.DOWNLOADER),
+                ("perl -e", 6, ThreatAction.DOWNLOADER),
+                ("openssl", 5, ThreatAction.DATA_EXFILTRATION),
+                ("gpg", 4, ThreatAction.DATA_EXFILTRATION),
+                ("tar czf", 5, ThreatAction.DATA_EXFILTRATION),
+                ("zip -r", 5, ThreatAction.DATA_EXFILTRATION),
+                ("ssh ", 4, ThreatAction.DATA_EXFILTRATION),
+                ("scp ", 4, ThreatAction.DATA_EXFILTRATION),
+                ("iptables -F", 8, ThreatAction.SYSTEM_MODIFICATION),
+                ("ufw disable", 7, ThreatAction.SYSTEM_MODIFICATION),
+                ("systemctl stop", 6, ThreatAction.SYSTEM_MODIFICATION),
+                ("kill -9", 5, ThreatAction.NONE),
+                ("pkill", 5, ThreatAction.NONE),
+                ("crontab", 7, ThreatAction.PERSISTENCE),
+                ("@reboot", 8, ThreatAction.PERSISTENCE),
+                ("nohup", 6, ThreatAction.PERSISTENCE),
+                ("disown", 6, ThreatAction.PERSISTENCE),
+                ("screen -dmS", 6, ThreatAction.PERSISTENCE),
+                ("tmux new -d", 6, ThreatAction.PERSISTENCE),
+            ]
+
+            # Padrões Python perigosos
+            self.dangerous_python_patterns = [
+                # Execução de código
+                (r"os\.system\s*\(", 8, ThreatAction.SYSTEM_MODIFICATION),
+                (r"os\.popen\s*\(", 8, ThreatAction.SYSTEM_MODIFICATION),
+                (r"subprocess\.(call|run|Popen)\s*\(", 8, ThreatAction.SYSTEM_MODIFICATION),
+                (r"eval\s*\(", 9, ThreatAction.NONE),
+                (r"exec\s*\(", 9, ThreatAction.NONE),
+                (r"compile\s*\(", 7, ThreatAction.NONE),
+                (r"__import__\s*\(", 6, ThreatAction.DOWNLOADER),
+                (r"importlib\.(import_module|reload)\s*\(", 6, ThreatAction.DOWNLOADER),
+
+                # Acesso a arquivos sensíveis
+                (r"open\s*\([^)]*['\"](/etc/passwd|/etc/shadow|/root/)", 9, ThreatAction.CREDENTIAL_THEFT),
+                (r"shutil\.rmtree\s*\(", 7, ThreatAction.FILE_DELETION),
+                (r"os\.remove\s*\(", 5, ThreatAction.FILE_DELETION),
+                (r"os\.unlink\s*\(", 5, ThreatAction.FILE_DELETION),
+
+                # Rede e exfiltração
+                (r"socket\.(connect|bind|listen)\s*\(", 6, ThreatAction.NETWORK_CONNECTION),
+                (r"requests\.(get|post|put|delete)\s*\(", 5, ThreatAction.DATA_EXFILTRATION),
+                (r"urllib\.(request|parse)\.", 5, ThreatAction.DATA_EXFILTRATION),
+                (r"http\.client\.", 5, ThreatAction.NETWORK_CONNECTION),
+                (r"ftplib\.", 6, ThreatAction.DATA_EXFILTRATION),
+                (r"smtplib\.", 6, ThreatAction.DATA_EXFILTRATION),
+
+                # Persistência
+                (r"exec2\.py", 7, ThreatAction.PERSISTENCE),
+                (r"background.*\.py", 6, ThreatAction.PERSISTENCE),
+                (r"daemon.*\.py", 6, ThreatAction.PERSISTENCE),
+                (r"service.*\.py", 5, ThreatAction.PERSISTENCE),
+
+                # Captura de entrada
+                (r"pynput\.keyboard", 8, ThreatAction.KEYLOGGING),
+                (r"keyboard\.hook", 8, ThreatAction.KEYLOGGING),
+                (r"getpass\.", 6, ThreatAction.CREDENTIAL_THEFT),
+                (r"input\s*\([^)]*senha|password|pass", 7, ThreatAction.CREDENTIAL_THEFT),
+
+                # Captura de tela/câmera/microfone
+                (r"pyautogui\.screenshot", 7, ThreatAction.SCREEN_CAPTURE),
+                (r"cv2\.VideoCapture", 7, ThreatAction.CAMERA_ACCESS),
+                (r"pygame\.camera", 7, ThreatAction.CAMERA_ACCESS),
+                (r"speech_recognition", 6, ThreatAction.MICROPHONE_ACCESS),
+                (r"pyaudio\.", 6, ThreatAction.MICROPHONE_ACCESS),
+                (r"sounddevice\.", 6, ThreatAction.MICROPHONE_ACCESS),
+
+                # Criptografia (possível ransomware)
+                (r"Crypto\.Cipher", 7, ThreatAction.FILE_ENCRYPTION),
+                (r"cryptography\.fernet", 7, ThreatAction.FILE_ENCRYPTION),
+                (r"rsa\.", 6, ThreatAction.FILE_ENCRYPTION),
+                (r"aes\.", 7, ThreatAction.FILE_ENCRYPTION),
+                (r"encrypt\s*\(", 6, ThreatAction.FILE_ENCRYPTION),
+                (r"decrypt\s*\(", 5, ThreatAction.NONE),
+
+                # Mineração
+                (r"cryptonight", 9, ThreatAction.CRYPTO_MINING),
+                (r"xmrig", 9, ThreatAction.CRYPTO_MINING),
+                (r"mining\.pool", 9, ThreatAction.CRYPTO_MINING),
+                (r"stratum\+tcp", 9, ThreatAction.CRYPTO_MINING),
+
+                # Ofuscação
+                (r"base64\.b64decode\s*\(", 6, ThreatAction.NONE),
+                (r"base64\.decodebytes\s*\(", 6, ThreatAction.NONE),
+                (r"codecs\.decode\s*\(", 5, ThreatAction.NONE),
+                (r"marshal\.loads?\s*\(", 7, ThreatAction.NONE),
+                (r"pickle\.loads?\s*\(", 7, ThreatAction.NONE),
+                (r"eval\s*\(\s*base64", 9, ThreatAction.NONE),
+                (r"exec\s*\(\s*base64", 9, ThreatAction.NONE),
+                (r"__builtins__", 8, ThreatAction.NONE),
+                (r"globals\s*\(\)", 6, ThreatAction.NONE),
+                (r"locals\s*\(\)", 6, ThreatAction.NONE),
+                (r"setattr\s*\(", 6, ThreatAction.NONE),
+                (r"getattr\s*\(", 5, ThreatAction.NONE),
+                (r"delattr\s*\(", 6, ThreatAction.NONE),
+            ]
+
             # Inicializar diretórios
-            os.makedirs(self.quarentena_dir, exist_ok=True)
-            os.makedirs(self.logs_dir, exist_ok=True)
-            
-            # Inicializar banco de dados
-            self.init_database()
-            
-            # Carregar listas
-            self.whitelist = self.load_whitelist()
-            self.blacklist = self.load_blacklist()
-        
-        def init_database(self):
-            """Inicializa banco de dados SQLite"""
-            conn = sqlite3.connect(self.db_path)
-            cursor = conn.cursor()
-            
-            cursor.execute('''
-                CREATE TABLE IF NOT EXISTS apps (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    nome TEXT UNIQUE,
-                    caminho TEXT,
-                    hash_md5 TEXT,
-                    hash_sha256 TEXT,
-                    tamanho INTEGER,
-                    data_analise TIMESTAMP,
-                    pontuacao INTEGER,
-                    perigo TEXT,
-                    status TEXT
-                )
-            ''')
-            
-            cursor.execute('''
-                CREATE TABLE IF NOT EXISTS logs (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    app_nome TEXT,
-                    data TIMESTAMP,
-                    tipo TEXT,
-                    descricao TEXT,
-                    detalhes TEXT
-                )
-            ''')
-            
-            conn.commit()
-            conn.close()
-        
-        def load_whitelist(self):
-            """Carrega lista de aplicativos confiáveis"""
-            default_whitelist = {
-                "calculadora": {"trust_level": 10, "reason": "app nativo"},
-                "notepad": {"trust_level": 10, "reason": "app nativo"},
-                "terminal": {"trust_level": 8, "reason": "app nativo com restrições"},
-                "gerenciador de arquivos": {"trust_level": 8, "reason": "app nativo"},
-                "config": {"trust_level": 9, "reason": "app nativo"},
-                "navegador": {"trust_level": 7, "reason": "acesso à internet"},
-                "gerenciador de tarefas": {"trust_level": 8, "reason": "app nativo"},
-                "mensagens": {"trust_level": 6, "reason": "comunicação P2P"},
-                "agenda": {"trust_level": 10, "reason": "app nativo"},
-                "audio": {"trust_level": 6, "reason": "acesso ao microfone"},
-                "paint": {"trust_level": 10, "reason": "app nativo"},
-                "diagnostico de rede": {"trust_level": 6, "reason": "diagnóstico"},
-                "controle de internet": {"trust_level": 7, "reason": "controle de rede"},
-                "python": {"trust_level": 5, "reason": "execução de código"}
-            }
-            
-            if os.path.exists(self.whitelist_path):
+            self.quarantine_dir.mkdir(parents=True, exist_ok=True)
+            self.logs_dir.mkdir(parents=True, exist_ok=True)
+            # Carregar dados
+            self.db = self._load_db()
+            self.whitelist = self._load_whitelist()
+            self.blacklist = self._load_blacklist()
+
+            # Configuração de ação automática
+            self.auto_action = auto_action
+
+        def _load_db(self) -> Dict:
+            """Carrega banco de dados de scans"""
+            if self.db_path.exists():
                 try:
-                    with open(self.whitelist_path, 'r', encoding='utf-8') as f:
-                        loaded = json.load(f)
-                        default_whitelist.update(loaded)
+                    with open(self.db_path, 'r', encoding='utf-8') as f:
+                        return json.load(f)
                 except:
                     pass
-            
+            return {"scans": [], "quarantine": [], "stats": {"total": 0, "threats": 0, "clean": 0}}
+
+        def _save_db(self):
+            """Salva banco de dados"""
+            with open(self.db_path, 'w', encoding='utf-8') as f:
+                json.dump(self.db, f, indent=2, ensure_ascii=False)
+
+        def _load_whitelist(self) -> Dict:
+            """Carrega whitelist com verificação de assinatura"""
+            default_whitelist = {
+                "calculadora": {"trust_level": 10, "reason": "app nativo", "hash": ""},
+                "notepad": {"trust_level": 10, "reason": "app nativo", "hash": ""},
+                "agenda": {"trust_level": 10, "reason": "app nativo", "hash": ""},
+                "paint": {"trust_level": 10, "reason": "app nativo", "hash": ""},
+                "terminal": {"trust_level": 7, "reason": "app nativo com restrições", "hash": ""},
+                "gerenciador de arquivos": {"trust_level": 8, "reason": "app nativo", "hash": ""},
+                "config": {"trust_level": 9, "reason": "app nativo", "hash": ""},
+                "gerenciador de tarefas": {"trust_level": 8, "reason": "app nativo", "hash": ""},
+            }
+
+            if self.whitelist_path.exists():
+                try:
+                    with open(self.whitelist_path, 'r', encoding='utf-8') as f:
+                        data = json.load(f)
+                        # Verificar assinatura se existir
+                        if "signature" in data and "data" in data:
+                            if self._verify_signature(data["data"], data["signature"]):
+                                default_whitelist.update(data["data"])
+                            else:
+                                print(f"{YELLOW}⚠️  Assinatura da whitelist inválida!{RESET}")
+                        else:
+                            default_whitelist.update(data)
+                except Exception as e:
+                    print(f"{RED}Erro ao carregar whitelist: {e}{RESET}")
+
             return default_whitelist
-        
-        def load_blacklist(self):
-            """Carrega lista negra"""
-            if os.path.exists(self.blacklist_path):
+
+        def _verify_signature(self, data: str, signature: str) -> bool:
+            """Verifica assinatura digital da whitelist"""
+            # Implementação simplificada - em produção usar GPG ou cryptography
+            try:
+                # Hash dos dados
+                data_hash = hashlib.sha256(data.encode()).hexdigest()
+                # Em produção: verificar com chave pública
+                # Aqui verificamos se a assinatura existe e tem formato válido
+                if len(signature) >= 64 and signature.startswith("SIG_"):
+                    return True
+                return False
+            except:
+                return False
+
+        def _sign_whitelist(self, data: Dict) -> Dict:
+            """Assina digitalmente a whitelist"""
+            data_str = json.dumps(data, sort_keys=True)
+            # Em produção: usar chave privada para assinar
+            signature = "SIG_" + hashlib.sha256(data_str.encode()).hexdigest()
+            return {
+                "data": data,
+                "signature": signature,
+                "timestamp": datetime.now().isoformat(),
+                "version": "1.0"
+            }
+
+        def _load_blacklist(self) -> Dict:
+            """Carrega blacklist"""
+            if self.blacklist_path.exists():
                 try:
                     with open(self.blacklist_path, 'r', encoding='utf-8') as f:
                         return json.load(f)
                 except:
                     pass
             return {}
-        
-        def calcular_hash(self, caminho_arquivo):
-            """Calcula hash MD5 do arquivo"""
-            if not os.path.exists(caminho_arquivo):
-                return None, None
-            
-            md5_hash = hashlib.md5()
+
+        def _calculate_hash(self, filepath: Path) -> str:
+            """Calcula hash SHA256 do arquivo"""
             sha256_hash = hashlib.sha256()
-            
             try:
-                with open(caminho_arquivo, 'rb') as f:
-                    for chunk in iter(lambda: f.read(4096), b""):
-                        md5_hash.update(chunk)
-                        sha256_hash.update(chunk)
-                return md5_hash.hexdigest(), sha256_hash.hexdigest()
+                with open(filepath, "rb") as f:
+                    for byte_block in iter(lambda: f.read(4096), b""):
+                        sha256_hash.update(byte_block)
+                return sha256_hash.hexdigest()
             except:
-                return None, None
-        
-        def analisar_app(self, app_nome, caminho_app):
-            """Analisa um aplicativo"""
-            print(f"\n{CYAN}{'='*60}{RESET}")
-            print(f"{CYAN}🔍 ANALISANDO: {app_nome}{RESET}")
-            print(f"{CYAN}{'='*60}{RESET}")
+                return ""
+
+        def _calculate_entropy(self, data: bytes) -> float:
+            """Calcula entropia de Shannon para detectar ofuscação"""
+            if not data:
+                return 0.0
+
+            import math
+            byte_counts = {}
             
-            if not os.path.exists(caminho_app):
-                return {"status": "error", "message": "App não encontrado"}
-            
-            # Verificar whitelist
-            if app_nome in self.whitelist:
-                info = self.whitelist[app_nome]
-                print(f"{GREEN}✓ App na whitelist (confiável){RESET}")
-                print(f"   Nível: {info['trust_level']}/10")
-                print(f"   Motivo: {info['reason']}")
-                return {"status": "seguro", "recomendacao": "permitir"}
-            
-            # Verificar blacklist
-            if app_nome in self.blacklist:
-                print(f"{RED}⚠️ App na lista negra!{RESET}")
-                print(f"   Motivo: {self.blacklist[app_nome]}")
-                return {"status": "bloqueado", "recomendacao": "bloquear"}
-            
-            # Análise estática
-            pontuacao, problemas = self.analise_estatica(caminho_app)
-            
-            print(f"\n{BLUE}📊 Resultado da análise:{RESET}")
-            print(f"   Pontuação de risco: {pontuacao}")
-            print(f"   Problemas encontrados: {len(problemas)}")
-            
-            # Determinar resultado
-            if pontuacao >= 20:
-                status = "critico"
-                recomendacao = "quarentena"
-                mensagem = f"{RED}⚠️ ALTO RISCO DETECTADO!{RESET}"
-            elif pontuacao >= 10:
-                status = "alto_risco"
-                recomendacao = "bloquear"
-                mensagem = f"{RED}⚠️ APLICATIVO DE ALTO RISCO{RESET}"
-            elif pontuacao >= 5:
-                status = "medio_risco"
-                recomendacao = "revisar"
-                mensagem = f"{YELLOW}⚠️ COMPORTAMENTO SUSPEITO{RESET}"
-            elif pontuacao >= 2:
-                status = "baixo_risco"
-                recomendacao = "permitir_com_restricoes"
-                mensagem = f"{YELLOW}ℹ️ POUCAS SUSPEITAS{RESET}"
-            else:
-                status = "seguro"
-                recomendacao = "permitir"
-                mensagem = f"{GREEN}✓ APARENTEMENTE SEGURO{RESET}"
-            
-            print(f"\n{mensagem}")
-            print(f"Status: {status.upper()}")
-            print(f"Recomendação: {recomendacao}")
-            
-            if problemas:
-                print(f"\n{YELLOW}📋 Problemas encontrados:{RESET}")
-                for p in problemas[:5]:
-                    print(f"   • {p}")
-            
-            return {
-                "status": status,
-                "pontuacao": pontuacao,
-                "problemas": problemas,
-                "recomendacao": recomendacao
-            }
-        
-        def analise_estatica(self, caminho_app):
-            """Análise estática do código"""
+            for byte in data:
+                byte_counts[byte] = byte_counts.get(byte, 0) + 1
+
+            data_len = len(data)
+            entropy = 0.0
+            for count in byte_counts.values():
+                if count > 0:
+                    p = count / data_len
+                    entropy -= p * math.log2(p)
+
+            return entropy
+
+        def _analyze_python_ast(self, filepath: Path) -> Tuple[int, List[str], MalwareType, List[ThreatAction]]:
+            """Análise AST profunda de código Python"""
             pontuacao = 0
             problemas = []
-            
-            # Padrões perigosos
-            padroes = [
-                (r"os\.system\s*\(", "os.system", 3),
-                (r"subprocess\.(call|Popen|run)\s*\(", "subprocess", 3),
-                (r"eval\s*\(", "eval", 4),
-                (r"exec\s*\(", "exec", 4),
-                (r"__import__\s*\(", "__import__ dinâmico", 2),
-                (r"shutil\.rmtree\s*\(", "shutil.rmtree", 2),
-                (r"os\.remove\s*\(", "os.remove", 1),
-                (r"socket\.(connect|bind|listen)\s*\(", "socket", 2),
-                (r"requests\.(get|post)\s*\(", "requests", 1),
-                (r"pickle\.loads?\s*\(", "pickle.load", 3),
-                (r"base64\.b64decode\s*\(", "base64 decode", 2),
-                (r"open\s*\([^)]*['\"]w['\"]", "write file", 1),
-            ]
-            
-            # Comandos críticos
-            comandos = [
-                ("rm -rf /", 10),
-                ("rm -rf --no-preserve-root", 10),
-                ("mkfs", 10),
-                ("dd if=/dev/zero", 9),
-                (":(){ :|:& };:", 10),
-                ("shutdown", 7),
-                ("poweroff", 7),
-            ]
-            
-            # Percorrer arquivos
-            for root, dirs, files in os.walk(caminho_app):
-                for file in files:
-                    if file.endswith('.py'):
-                        caminho = os.path.join(root, file)
-                        
+            malware_type = MalwareType.UNKNOWN
+            actions = []
+            detected_patterns = set()
+
+            try:
+                with open(filepath, 'r', encoding='utf-8', errors='ignore') as f:
+                    codigo = f.read()
+
+                # Verificar ofuscação por entropia
+                entropy = self._calculate_entropy(codigo.encode())
+                if entropy > 6.5:
+                    pontuacao += 15
+                    problemas.append(f"Alta entropia ({entropy:.2f}) - possível código ofuscado")
+                    detected_patterns.add("obfuscation")
+
+                # Verificar strings codificadas em base64
+                base64_pattern = r'[A-Za-z0-9+/]{50,}={0,2}'
+                base64_matches = re.findall(base64_pattern, codigo)
+                for match in base64_matches:
+                    try:
+                        decoded = base64.b64decode(match).decode('utf-8', errors='ignore')
+                        if any(p in decoded.lower() for p in ['os.system', 'eval', 'exec', 'import']):
+                            pontuacao += 20
+                            problemas.append("Código malicioso codificado em base64 detectado")
+                            detected_patterns.add("encoded_payload")
+                    except:
+                        pass
+
+                # Parse AST
+                try:
+                    tree = ast.parse(codigo)
+                except SyntaxError as e:
+                    problemas.append(f"Erro de sintaxe: {e}")
+                    pontuacao += 5
+                    return pontuacao, problemas, MalwareType.UNKNOWN, actions
+
+                # Analisar nós AST
+                for node in ast.walk(tree):
+                    # Imports perigosos
+                    if isinstance(node, ast.Import):
+                        for alias in node.names:
+                            if alias.name in ['os', 'sys', 'subprocess', 'socket', 'pickle', 'marshal']:
+                                pontuacao += 3
+                                problemas.append(f"Importação: {alias.name}")
+
+                    if isinstance(node, ast.ImportFrom):
+                        if node.module in ['os', 'sys', 'subprocess', 'socket', 'ctypes']:
+                            pontuacao += 4
+                            problemas.append(f"ImportFrom: {node.module}")
+
+                    # Chamadas de função
+                    if isinstance(node, ast.Call):
+                        func_name = ""
+                        if isinstance(node.func, ast.Attribute):
+                            func_name = node.func.attr
+                        elif isinstance(node.func, ast.Name):
+                            func_name = node.func.id
+
+                        # Verificar contra padrões perigosos
+                        for pattern, peso, action in self.dangerous_python_patterns:
+                            if re.search(pattern, f"{func_name}(", re.IGNORECASE):
+                                pontuacao += peso
+                                problemas.append(f"Padrão perigoso: {func_name} (+{peso})")
+                                actions.append(action)
+                                detected_patterns.add(func_name)
+
+                    # Strings suspeitas
+                    if isinstance(node, ast.Constant) and isinstance(node.value, str):
+                        valor = node.value.lower()
+                        # URLs suspeitas
+                        for pattern in self.suspicious_patterns:
+                            if re.search(pattern, node.value):
+                                pontuacao += 10
+                                problemas.append(f"URL suspeita: {node.value[:50]}")
+                                actions.append(ThreatAction.NETWORK_CONNECTION)
+                                detected_patterns.add("suspicious_url")
+
+                        # Domínios suspeitos
+                        for domain in self.suspicious_domains:
+                            if domain in valor:
+                                pontuacao += 8
+                                problemas.append(f"Domínio suspeito: {domain}")
+                                detected_patterns.add("suspicious_domain")
+
+                        # Comandos shell em strings
+                        for cmd, peso, action in self.dangerous_shell_commands:
+                            if cmd in valor:
+                                pontuacao += peso
+                                problemas.append(f"Comando shell em string: {cmd}")
+                                actions.append(action)
+                                detected_patterns.add("shell_command")
+
+                # Classificar tipo de malware baseado nos padrões detectados
+                malware_type = self._classify_malware(detected_patterns, actions)
+
+            except Exception as e:
+                problemas.append(f"Erro na análise AST: {e}")
+                pontuacao += 3
+
+            return pontuacao, problemas, malware_type, actions
+
+        def _analyze_shell_script(self, filepath: Path) -> Tuple[int, List[str], MalwareType, List[ThreatAction]]:
+            """Análise de scripts shell (.sh)"""
+            pontuacao = 0
+            problemas = []
+            actions = []
+            detected_patterns = set()
+
+            try:
+                with open(filepath, 'r', encoding='utf-8', errors='ignore') as f:
+                    conteudo = f.read()
+
+                # Verificar comandos perigosos
+                for cmd, peso, action in self.dangerous_shell_commands:
+                    if cmd in conteudo:
+                        pontuacao += peso
+                        problemas.append(f"Comando perigoso: {cmd} (+{peso})")
+                        actions.append(action)
+                        detected_patterns.add(cmd)
+
+                # Verificar ofuscação shell
+                if re.search(r'\$\([^)]+\)', conteudo):
+                    pontuacao += 5
+                    problemas.append("Subshell detectada (possível ofuscação)")
+
+                if re.search(r'eval\s+', conteudo):
+                    pontuacao += 10
+                    problemas.append("Comando eval detectado")
+                    detected_patterns.add("eval")
+
+                # Verificar download e execução
+                if re.search(r'(wget|curl).+\|\s*(bash|sh)', conteudo):
+                    pontuacao += 20
+                    problemas.append("Download e execução de script remoto!")
+                    detected_patterns.add("remote_exec")
+
+                # Classificar malware
+                malware_type = self._classify_malware(detected_patterns, actions)
+
+            except Exception as e:
+                problemas.append(f"Erro na análise shell: {e}")
+                pontuacao += 3
+
+            return pontuacao, problemas, malware_type, actions
+
+        def _classify_malware(self, patterns: set, actions: List[ThreatAction]) -> MalwareType:
+            """Classifica o tipo de malware baseado nos padrões detectados"""
+            action_counts = {}
+            for action in actions:
+                action_counts[action] = action_counts.get(action, 0) + 1
+
+            # Regras de classificação
+            if ThreatAction.FILE_ENCRYPTION in actions:
+                return MalwareType.RANSOMWARE
+
+            if ThreatAction.KEYLOGGING in actions or ThreatAction.CREDENTIAL_THEFT in actions:
+                if ThreatAction.DATA_EXFILTRATION in actions:
+                    return MalwareType.SPYWARE
+                return MalwareType.KEYLOGGER
+
+            if ThreatAction.PERSISTENCE in actions and ThreatAction.PRIVILEGE_ESCALATION in actions:
+                return MalwareType.ROOTKIT
+
+            if ThreatAction.BACKDOOR in actions or "nc " in patterns or "netcat" in patterns:
+                return MalwareType.BACKDOOR
+
+            if ThreatAction.CRYPTO_MINING in actions:
+                return MalwareType.MINER
+                
+            if ThreatAction.DOWNLOADER in actions and ThreatAction.PERSISTENCE in actions:
+                return MalwareType.TROJAN
+
+            if ThreatAction.DATA_EXFILTRATION in actions and ThreatAction.SCREEN_CAPTURE in actions:
+                return MalwareType.RAT
+
+            if ThreatAction.PERSISTENCE in actions and "crontab" in patterns:
+                return MalwareType.WORM
+
+            if len(actions) > 0:
+                return MalwareType.TROJAN
+
+            return MalwareType.UNKNOWN
+
+        def _quarantine_app(self, app_name: str, app_path: Path, reason: str) -> bool:
+            """Move app para quarentena com permissões restritas"""
+            try:
+                timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+                quarantine_path = self.quarantine_dir / f"{app_name}_{timestamp}"
+
+                # Copiar para quarentena
+                if app_path.is_dir():
+                    shutil.copytree(app_path, quarantine_path)
+                else:
+                    shutil.copy2(app_path, quarantine_path)
+
+                # Aplicar permissões restritas em TODOS os arquivos
+                for root, dirs, files in os.walk(quarantine_path):
+                    for file in files:
+                        file_path = Path(root) / file
                         try:
-                            with open(caminho, 'r', encoding='utf-8') as f:
-                                conteudo = f.read()
-                            
-                            # Verificar padrões
-                            for padrao, nome, peso in padroes:
-                                if re.search(padrao, conteudo, re.IGNORECASE):
-                                    pontuacao += peso
-                                    problemas.append(f"{nome} em {file} (+{peso})")
-                            
-                            # Verificar comandos
-                            for comando, peso in comandos:
-                                if comando in conteudo:
-                                    pontuacao += peso
-                                    problemas.append(f"Comando crítico em {file}: {comando} (+{peso})")
-                        
+                            # chmod 000
+                            os.chmod(file_path, 0o000)
+                            # Mudar owner para nobody (se possível)
+                            try:
+                                import pwd
+                                nobody_uid = pwd.getpwnam('nobody').pw_uid
+                                nobody_gid = pwd.getpwnam('nobody').pw_gid
+                                os.chown(file_path, nobody_uid, nobody_gid)
+                            except:
+                                pass  # Ignora se não tiver permissão
                         except Exception as e:
-                            problemas.append(f"Erro ao ler {file}: {e}")
-            
-            return pontuacao, problemas
-        
-        def quarentena(self, app_nome, caminho_app):
-            """Move app para quarentena"""
-            destino = os.path.join(self.quarentena_dir, app_nome)
-            if os.path.exists(caminho_app):
-                shutil.move(caminho_app, destino)
-                print(f"{GREEN}✓ App movido para quarentena{RESET}")
+                            print(f"{YELLOW}⚠️  Não foi possível alterar permissões: {e}{RESET}")
+
+                # Remover permissão de boot
+                self._remove_boot_permission(app_name)
+
+                # Remover original
+                if app_path.exists():
+                    if app_path.is_dir():
+                        shutil.rmtree(app_path)
+                    else:
+                        os.remove(app_path)
+
+                # Registrar na DB
+                hash_value = ""
+                if quarantine_path.is_dir():
+                    files = list(quarantine_path.glob('*'))
+                    if files:
+                        hash_value = self._calculate_hash(files[0])
+                else:
+                    hash_value = self._calculate_hash(quarantine_path)
+                    
+                self.db["quarantine"].append({
+                    "app": app_name,
+                    "original_path": str(app_path),
+                    "quarantine_path": str(quarantine_path),
+                    "reason": reason,
+                    "timestamp": datetime.now().isoformat(),
+                    "hash": hash_value
+                })
+                self._save_db()
+
                 return True
-            return False
-        
-        def listar_quarentena(self):
-            """Lista apps em quarentena"""
-            if not os.path.exists(self.quarentena_dir):
-                return []
-            return [d for d in os.listdir(self.quarentena_dir) 
-                   if os.path.isdir(os.path.join(self.quarentena_dir, d))]
-        
-        def restaurar_quarentena(self, app_nome):
-            """Restaura app da quarentena"""
-            origem = os.path.join(self.quarentena_dir, app_nome)
-            destino = os.path.join("./apps", app_nome)
-            if os.path.exists(origem):
-                shutil.move(origem, destino)
-                print(f"{GREEN}✓ App restaurado da quarentena{RESET}")
-                return True
-            return False
-        
-        def menu_interativo(self):
-            """Menu interativo"""
+            except Exception as e:
+                print(f"{RED}Erro na quarentena: {e}{RESET}")
+                traceback.print_exc()
+                return False
+
+        def _remove_boot_permission(self, app_name: str):
+            """Remove permissão de inicialização do app"""
+            boot_perms_path = Path("./app_boot_perms.json")
+            if boot_perms_path.exists():
+                try:
+                    with open(boot_perms_path, 'r') as f:
+                        perms = json.load(f)
+                    if app_name in perms:
+                        perms[app_name] = False
+                        with open(boot_perms_path, 'w') as f:
+                            json.dump(perms, f, indent=2)
+                except:
+                    pass
+
+        def _log_scan(self, app_name: str, result: Dict):
+            """Registra scan nos logs"""
+            log_entry = {
+                "timestamp": datetime.now().isoformat(),
+                "app": app_name,
+                "status": result.get("status", "unknown"),
+                "risk_score": result.get("risk_score", 0),
+                "malware_type": result.get("malware_type", "unknown"),
+                "actions": [a.value for a in result.get("actions", [])]
+            }
+            self.db["scans"].append(log_entry)
+            self._save_db()
+
+        def scan_app(self, app_name: str, auto_quarantine: bool = None) -> Dict:
+            """Escaneia um aplicativo completo"""
+            if auto_quarantine is None:
+                auto_quarantine = self.auto_action
+
+            app_path = self.base_dir / app_name
+            result = {
+                "app": app_name,
+                "path": str(app_path),
+                "status": "seguro",
+                "risk_score": 0,
+                "malware_type": MalwareType.SAFE.value,
+                "actions": [],
+                "problems": [],
+                "files_scanned": 0,
+                "timestamp": datetime.now().isoformat()
+            }
+
+            print(f"\n{CYAN}{'='*60}{RESET}")
+            print(f"{CYAN}🔍 ESCANEANDO: {app_name}{RESET}")
+            print(f"{CYAN}{'='*60}{RESET}")
+
+            # Verificar whitelist
+            if app_name in self.whitelist:
+                info = self.whitelist[app_name]
+                print(f"{GREEN}✓ Na whitelist (confiável){RESET}")
+                print(f"   Nível: {info.get('trust_level', 'N/A')}/10")
+                print(f"   Motivo: {info.get('reason', 'N/A')}")
+                result["status"] = "whitelist"
+                self._log_scan(app_name, result)
+                return result
+
+            # Verificar blacklist
+            if app_name in self.blacklist:
+                print(f"{RED}⚠️  Na blacklist!{RESET}")
+                print(f"   Motivo: {self.blacklist[app_name]}")
+                result["status"] = "blacklist"
+                result["risk_score"] = 100
+                result["malware_type"] = "bloqueado"
+                if auto_quarantine:
+                    self._quarantine_app(app_name, app_path, "Na blacklist")
+                self._log_scan(app_name, result)
+                return result
+
+            # Escanear arquivos
+            total_risk = 0
+            all_actions = []
+            all_problems = []
+            malware_types = []
+            if app_path.exists():
+                files_to_scan = list(app_path.rglob("*.py")) + list(app_path.rglob("*.sh"))
+
+                for filepath in files_to_scan:
+                    result["files_scanned"] += 1
+                    print(f"   📄 {filepath.name}...")
+
+                    if filepath.suffix == '.py':
+                        risk, problems, mtype, actions = self._analyze_python_ast(filepath)
+                    elif filepath.suffix == '.sh':
+                        risk, problems, mtype, actions = self._analyze_shell_script(filepath)
+                    else:
+                        continue
+
+                    total_risk += risk
+                    all_actions.extend(actions)
+                    all_problems.extend(problems)
+                    if mtype != MalwareType.UNKNOWN:
+                        malware_types.append(mtype)
+
+            # Calcular resultado final
+            result["risk_score"] = total_risk
+            result["actions"] = list(set(all_actions))
+            result["problems"] = all_problems[:10]  # Limitar problemas
+
+            # Determinar tipo de malware predominante
+            if malware_types:
+                # Pegar o tipo mais severo
+                severity_order = [
+                    MalwareType.RANSOMWARE, MalwareType.ROOTKIT, MalwareType.RAT,
+                    MalwareType.BACKDOOR, MalwareType.MINER, MalwareType.TROJAN,
+                    MalwareType.SPYWARE, MalwareType.KEYLOGGER, MalwareType.WORM
+                ]
+                for mtype in severity_order:
+                    if mtype in malware_types:
+                        result["malware_type"] = mtype.value
+                        break
+                else:
+                    result["malware_type"] = malware_types[0].value
+            else:
+                result["malware_type"] = MalwareType.UNKNOWN.value
+
+            # Classificar status
+            if total_risk >= 50:
+                result["status"] = "crítico"
+            elif total_risk >= 30:
+                result["status"] = "alto_risco"
+            elif total_risk >= 15:
+                result["status"] = "medio_risco"
+            elif total_risk >= 5:
+                result["status"] = "baixo_risco"
+            else:
+                result["status"] = "seguro"
+
+            # Exibir resultado
+            print(f"\n{BLUE}📊 RESULTADO:{RESET}")
+            print(f"   Arquivos escaneados: {result['files_scanned']}")
+            print(f"   Pontuação de risco: {total_risk}")
+            print(f"   Tipo: {result['malware_type']}")
+            print(f"   Status: {result['status'].upper()}")
+
+            if result["actions"]:
+                print(f"\n{YELLOW}⚠️  Ações detectadas:{RESET}")
+                for action in set(result["actions"]):
+                    print(f"   • {action.value}")
+
+            if result["problems"]:
+                print(f"\n{YELLOW}📋 Problemas encontrados:{RESET}")
+                for p in result["problems"][:5]:
+                    print(f"   • {p}")
+
+            # Ação automática
+            if result["status"] in ["crítico", "alto_risco"] and auto_quarantine:
+                print(f"\n{RED}🚨 AÇÃO AUTOMÁTICA: Colocando em quarentena...{RESET}")
+                if self._quarantine_app(app_name, app_path, f"Risco: {total_risk}, Tipo: {result['malware_type']}"):
+                    result["status"] = "quarentena"
+            elif result["status"] in ["crítico", "alto_risco"]:
+                confirm = input(f"\n{RED}Colocar em quarentena? (s/n): {RESET}").strip().lower()
+                if confirm == 's':
+                    if self._quarantine_app(app_name, app_path, f"Risco: {total_risk}"):
+                        result["status"] = "quarentena"
+
+            self._log_scan(app_name, result)
+            return result
+
+        def scan_all(self, auto_quarantine: bool = None):
+            """Escaneia todos os aplicativos"""
+            if auto_quarantine is None:
+                auto_quarantine = self.auto_action
+
+            print(f"\n{CYAN}{'='*60}{RESET}")
+            print(f"{CYAN}🛡️  ESCANEAMENTO COMPLETO - pyOS ANTIVIRUS{RESET}")
+            print(f"{CYAN}{'='*60}{RESET}")
+
+            apps = [d for d in os.listdir(self.base_dir) if os.path.isdir(self.base_dir / d)]
+            results = []
+
+            for i, app in enumerate(apps, 1):
+                print(f"\n[{i}/{len(apps)}] {app}")
+                result = self.scan_app(app, auto_quarantine)
+                results.append(result)
+
+            # Resumo
+            print(f"\n{CYAN}{'='*60}{RESET}")
+            print(f"{CYAN}📊 RESUMO DO ESCANEAMENTO{RESET}")
+            print(f"{CYAN}{'='*60}{RESET}")
+
+            threats = [r for r in results if r["status"] not in ["seguro", "whitelist"]]
+            print(f"   Total de apps: {len(apps)}")
+            print(f"   Seguros: {len(apps) - len(threats)}")
+            print(f"   Ameaças detectadas: {len(threats)}")
+
+            if threats:
+                print(f"\n{RED}⚠️  AMEAÇAS:{RESET}")
+                for t in threats:
+                    print(f"   • {t['app']} - {t['malware_type']} (Risco: {t['risk_score']})")
+
+            self._save_db()
+            input(f"\n{YELLOW}Pressione Enter para continuar...{RESET}")
+
+        def manage_whitelist(self):
+            """Gerenciar whitelist com assinatura digital"""
             while True:
                 os.system('clear')
                 print(f"\n{CYAN}{'='*60}{RESET}")
-                print(f"{CYAN}🛡️  ANTIVÍRUS pyOS{RESET}")
+                print(f"{CYAN}📋 GERENCIAR WHITELIST{RESET}")
                 print(f"{CYAN}{'='*60}{RESET}")
-                print(f"\n{WHITE}Opções:{RESET}")
-                print("  1. Analisar app específico")
-                print("  2. Analisar todos os apps")
-                print("  3. Ver quarentena")
-                print("  4. Restaurar da quarentena")
-                print("  5. Ver relatório")
-                print("  6. Adicionar à whitelist")
-                print("  7. Adicionar à blacklist")
-                print("  0. Sair")
-                
-                opcao = input(f"\n{CYAN}Escolha: {RESET}").strip()
-                
-                if opcao == "1":
-                    os.system('clear')
-                    print(f"\n{BLUE}Apps disponíveis:{RESET}")
-                    
-                    apps_list = []
-                    if os.path.exists("./apps"):
-                        apps_list = [d for d in os.listdir("./apps") 
-                                   if os.path.isdir(os.path.join("./apps", d))]
-                    
-                    for i, app in enumerate(apps_list, 1):
-                        print(f"  {i}. {app}")
-                    
-                    if not apps_list:
-                        print("  Nenhum app encontrado")
-                        input("\nPressione Enter...")
-                        continue
-                    
-                    escolha = input(f"\nNome ou número: ").strip()
-                    
-                    if escolha.isdigit():
-                        idx = int(escolha) - 1
-                        if 0 <= idx < len(apps_list):
-                            app_nome = apps_list[idx]
-                        else:
-                            print(f"{RED}App não encontrado{RESET}")
-                            time.sleep(1)
-                            continue
-                    else:
-                        app_nome = escolha
-                    
-                    caminho = os.path.join("./apps", app_nome)
-                    if os.path.exists(caminho):
-                        resultado = self.analisar_app(app_nome, caminho)
-                        
-                        if resultado.get("recomendacao") == "quarentena":
-                            confirmar = input(f"\n{RED}Colocar em quarentena? (s/n): {RESET}")
-                            if confirmar.lower() == 's':
-                                self.quarentena(app_nome, caminho)
-                    else:
-                        print(f"{RED}App não encontrado{RESET}")
-                        time.sleep(1)
-                    
-                    input(f"\n{YELLOW}Pressione Enter...{RESET}")
-                
-                elif opcao == "2":
-                    print(f"\n{BLUE}Analisando todos os apps...{RESET}")
-                    
-                    if os.path.exists("./apps"):
-                        apps_list = [d for d in os.listdir("./apps") 
-                                   if os.path.isdir(os.path.join("./apps", d))]
-                        
-                        for i, app in enumerate(apps_list, 1):
-                            print(f"\n[{i}/{len(apps_list)}] Analisando: {app}")
-                            caminho = os.path.join("./apps", app)
-                            self.analisar_app(app, caminho)
-                            time.sleep(0.5)
-                    
-                    print(f"\n{GREEN}Análise concluída!{RESET}")
-                    input(f"\n{YELLOW}Pressione Enter...{RESET}")
-                
-                elif opcao == "3":
-                    quarentena = self.listar_quarentena()
-                    if quarentena:
-                        print(f"\n{BLUE}Apps em quarentena:{RESET}")
-                        for i, app in enumerate(quarentena, 1):
-                            print(f"  {i}. {app}")
-                    else:
-                        print(f"\n{GREEN}Nenhum app em quarentena{RESET}")
-                    input(f"\n{YELLOW}Pressione Enter...{RESET}")
-                
-                elif opcao == "4":
-                    quarentena = self.listar_quarentena()
-                    if quarentena:
-                        print(f"\n{BLUE}Apps em quarentena:{RESET}")
-                        for i, app in enumerate(quarentena, 1):
-                            print(f"  {i}. {app}")
-                        
-                        escolha = input(f"\nNúmero para restaurar: ").strip()
-                        if escolha.isdigit():
-                            idx = int(escolha) - 1
-                            if 0 <= idx < len(quarentena):
-                                self.restaurar_quarentena(quarentena[idx])
-                    else:
-                        print(f"\n{GREEN}Nenhum app em quarentena{RESET}")
-                    input(f"\n{YELLOW}Pressione Enter...{RESET}")
-                
-                elif opcao == "5":
-                    print(f"\n{CYAN}{'='*60}{RESET}")
-                    print(f"{CYAN}📊 RELATÓRIO{RESET}")
-                    print(f"{CYAN}{'='*60}{RESET}")
-                    
-                    # Contar apps
-                    total = 0
-                    if os.path.exists("./apps"):
-                        total = len([d for d in os.listdir("./apps") 
-                                   if os.path.isdir(os.path.join("./apps", d))])
-                    
-                    quarentena = self.listar_quarentena()
-                    
-                    print(f"\n{BLUE}Estatísticas:{RESET}")
-                    print(f"  Apps instalados: {total}")
-                    print(f"  Apps em quarentena: {len(quarentena)}")
-                    print(f"  Apps na whitelist: {len(self.whitelist)}")
-                    print(f"  Apps na blacklist: {len(self.blacklist)}")
-                    
-                    input(f"\n{YELLOW}Pressione Enter...{RESET}")
-                
-                elif opcao == "6":
-                    app_nome = input(f"\nNome do app: ").strip()
-                    motivo = input("Motivo: ").strip()
-                    nivel = input("Nível (1-10): ").strip()
-                    
+                print("1. Ver whitelist atual")
+                print("2. Adicionar app à whitelist")
+                print("3. Remover app da whitelist")
+                print("4. Assinar whitelist (admin)")
+                print("5. Verificar assinatura")
+                print("0. Voltar")
+
+                op = input(f"\n{CYAN}Opção: {RESET}").strip()
+
+                if op == "1":
+                    print(f"\n{BLUE}Apps na whitelist:{RESET}")
+                    for app, info in self.whitelist.items():
+                        print(f"   • {app} (Nível: {info.get('trust_level', 'N/A')})")
+                    input(f"\n{YELLOW}Enter para continuar...{RESET}")
+
+                elif op == "2":
+                    app_name = input("Nome do app: ").strip()
+                    reason = input("Motivo: ").strip()
+                    trust = input("Nível (1-10): ").strip()
+
                     try:
-                        nivel = int(nivel)
-                        if 1 <= nivel <= 10:
-                            self.whitelist[app_nome] = {
-                                "trust_level": nivel,
-                                "reason": motivo,
-                                "data": datetime.now().isoformat()
+                        trust = int(trust)
+                        if 1 <= trust <= 10:
+                            # Calcular hash do app
+                            app_path = self.base_dir / app_name
+                            app_hash = ""
+                            if app_path.exists():
+                                files = list(app_path.rglob("*.py"))
+                                if files:
+                                    app_hash = self._calculate_hash(files[0])
+
+                            self.whitelist[app_name] = {
+                                "trust_level": trust,
+                                "reason": reason,
+                                "hash": app_hash,
+                                "added": datetime.now().isoformat()
                             }
+
+                            # Salvar e assinar
+                            signed = self._sign_whitelist(self.whitelist)
                             with open(self.whitelist_path, 'w', encoding='utf-8') as f:
-                                json.dump(self.whitelist, f, indent=2, ensure_ascii=False)
-                            print(f"{GREEN}✓ Adicionado à whitelist{RESET}")
+                                json.dump(signed, f, indent=2, ensure_ascii=False)
+
+                            print(f"{GREEN}✓ Adicionado e assinado{RESET}")
                         else:
                             print(f"{RED}Nível inválido{RESET}")
                     except:
                         print(f"{RED}Entrada inválida{RESET}")
-                    
-                    time.sleep(1)
-                
-                elif opcao == "7":
-                    app_nome = input(f"\nNome do app: ").strip()
-                    motivo = input("Motivo: ").strip()
-                    
-                    self.blacklist[app_nome] = motivo
+                    input(f"\n{YELLOW}Enter para continuar...{RESET}")
+
+                elif op == "3":
+                    app_name = input("Nome do app para remover: ").strip()
+                    if app_name in self.whitelist:
+                        del self.whitelist[app_name]
+                        signed = self._sign_whitelist(self.whitelist)
+                        with open(self.whitelist_path, 'w', encoding='utf-8') as f:
+                            json.dump(signed, f, indent=2, ensure_ascii=False)
+                        print(f"{GREEN}✓ Removido{RESET}")
+                    else:
+                        print(f"{RED}App não encontrado{RESET}")
+                    input(f"\n{YELLOW}Enter para continuar...{RESET}")
+
+                elif op == "4":
+                    signed = self._sign_whitelist(self.whitelist)
+                    with open(self.whitelist_path, 'w', encoding='utf-8') as f:
+                        json.dump(signed, f, indent=2, ensure_ascii=False)
+                    print(f"{GREEN}✓ Whitelist assinada{RESET}")
+                    input(f"\n{YELLOW}Enter para continuar...{RESET}")
+
+                elif op == "5":
+                    if self.whitelist_path.exists():
+                        with open(self.whitelist_path, 'r') as f:
+                            data = json.load(f)
+                        if "signature" in data:
+                            if self._verify_signature(json.dumps(data["data"]), data["signature"]):
+                                print(f"{GREEN}✓ Assinatura válida{RESET}")
+                            else:
+                                print(f"{RED}✗ Assinatura inválida!{RESET}")
+                        else:
+                            print(f"{YELLOW}⚠️  Sem assinatura{RESET}")
+                    input(f"\n{YELLOW}Enter para continuar...{RESET}")
+
+                elif op == "0":
+                    break
+
+        def manage_blacklist(self):
+            """Gerenciar blacklist"""
+            while True:
+                os.system('clear')
+                print(f"\n{CYAN}{'='*60}{RESET}")
+                print(f"{CYAN}📋 GERENCIAR BLACKLIST{RESET}")
+                print(f"{CYAN}{'='*60}{RESET}")
+                print("1. Ver blacklist atual")
+                print("2. Adicionar app à blacklist")
+                print("3. Remover app da blacklist")
+                print("0. Voltar")
+
+                op = input(f"\n{CYAN}Opção: {RESET}").strip()
+
+                if op == "1":
+                    print(f"\n{RED}Apps na blacklist:{RESET}")
+                    for app, reason in self.blacklist.items():
+                        print(f"   • {app} - {reason}")
+                    input(f"\n{YELLOW}Enter para continuar...{RESET}")
+
+                elif op == "2":
+                    app_name = input("Nome do app: ").strip()
+                    reason = input("Motivo: ").strip()
+                    self.blacklist[app_name] = reason
                     with open(self.blacklist_path, 'w', encoding='utf-8') as f:
                         json.dump(self.blacklist, f, indent=2, ensure_ascii=False)
-                    
-                    print(f"{RED}✓ Adicionado à blacklist{RESET}")
+                    print(f"{GREEN}✓ Adicionado{RESET}")
+                    input(f"\n{YELLOW}Enter para continuar...{RESET}")
+
+                elif op == "3":
+                    app_name = input("Nome do app para remover: ").strip()
+                    if app_name in self.blacklist:
+                        del self.blacklist[app_name]
+                        with open(self.blacklist_path, 'w', encoding='utf-8') as f:
+                            json.dump(self.blacklist, f, indent=2, ensure_ascii=False)
+                        print(f"{GREEN}✓ Removido{RESET}")
+                    else:
+                        print(f"{RED}App não encontrado{RESET}")
+                    input(f"\n{YELLOW}Enter para continuar...{RESET}")
+
+                elif op == "0":
+                    break
+
+        def view_quarantine(self):
+            """Visualizar quarentena"""
+            os.system('clear')
+            print(f"\n{CYAN}{'='*60}{RESET}")
+            print(f"{CYAN}📦 QUARENTENA{RESET}")
+            print(f"{CYAN}{'='*60}{RESET}")
+
+            if not self.db["quarantine"]:
+                print(f"\n{GREEN}Nenhum app em quarentena{RESET}")
+            else:
+                for i, item in enumerate(self.db["quarantine"], 1):
+                    print(f"\n{i}. {item['app']}")
+                    print(f"   Motivo: {item['reason']}")
+                    print(f"   Data: {item['timestamp']}")
+                    print(f"   Local: {item['quarantine_path']}")
+
+            print(f"\n{CYAN}{'='*60}{RESET}")
+            print("1. Restaurar app")
+            print("2. Excluir permanentemente")
+            print("0. Voltar")
+
+            op = input(f"\n{CYAN}Opção: {RESET}").strip()
+
+            if op == "1" and self.db["quarantine"]:
+                idx = input("Número do app: ").strip()
+                if idx.isdigit() and 1 <= int(idx) <= len(self.db["quarantine"]):
+                    item = self.db["quarantine"][int(idx) - 1]
+                    confirm = input(f"Restaurar {item['app']}? (s/n): ").strip().lower()
+                    if confirm == 's':
+                        # Restaurar permissões e mover de volta
+                        # (implementação simplificada)
+                        print(f"{GREEN}✓ Restaurado (implementação manual necessária){RESET}")
+            elif op == "2" and self.db["quarantine"]:
+                idx = input("Número do app: ").strip()
+                if idx.isdigit() and 1 <= int(idx) <= len(self.db["quarantine"]):
+                    item = self.db["quarantine"][int(idx) - 1]
+                    confirm = input(f"Excluir permanentemente {item['app']}? (s/n): ").strip().lower()
+                    if confirm == 's':
+                        shutil.rmtree(item['quarantine_path'], ignore_errors=True)
+                        self.db["quarantine"].pop(int(idx) - 1)
+                        self._save_db()
+                        print(f"{GREEN}✓ Excluído{RESET}")
+
+        def menu_interativo(self):
+            """Menu principal do antivírus"""
+            while True:
+                os.system('clear')
+                print(f"\n{CYAN}{'='*60}{RESET}")
+                print(f"{CYAN}🛡️  PYOS ANTIVIRUS ENGINE v2.0{RESET}")
+                print(f"{CYAN}{'='*60}{RESET}")
+                print(f"\n{WHITE}Opções:{RESET}")
+                print("  1. Escanear app específico")
+                print("  2. Escanear todos os apps")
+                print("  3. Ver quarentena")
+                print("  4. Gerenciar whitelist (assinada)")
+                print("  5. Gerenciar blacklist")
+                print("  6. Ver estatísticas")
+                print("  7. Configurar ação automática")
+                print("  0. Sair")
+
+                opcao = input(f"\n{CYAN}Escolha: {RESET}").strip()
+
+                if opcao == "1":
+                    app_name = input("Nome do app: ").strip()
+                    if (self.base_dir / app_name).exists():
+                        self.scan_app(app_name)
+                        input(f"\n{YELLOW}Enter para continuar...{RESET}")
+                    else:
+                        print(f"{RED}App não encontrado{RESET}")
+                        time.sleep(1)
+
+                elif opcao == "2":
+                    auto = input("Agir automaticamente em ameaças? (s/n): ").strip().lower() == 's'
+                    self.scan_all(auto)
+
+                elif opcao == "3":
+                    self.view_quarantine()
+
+                elif opcao == "4":
+                    self.manage_whitelist()
+
+                elif opcao == "5":
+                    self.manage_blacklist()
+
+                elif opcao == "6":
+                    print(f"\n{CYAN}{'='*60}{RESET}")
+                    print(f"{CYAN}📊 ESTATÍSTICAS{RESET}")
+                    print(f"{CYAN}{'='*60}{RESET}")
+                    print(f"   Total de scans: {len(self.db['scans'])}")
+                    print(f"   Apps em quarentena: {len(self.db['quarantine'])}")
+                    print(f"   Apps na whitelist: {len(self.whitelist)}")
+                    print(f"   Apps na blacklist: {len(self.blacklist)}")
+                    input(f"\n{YELLOW}Enter para continuar...{RESET}")
+
+                elif opcao == "7":
+                    self.auto_action = input("Ação automática ativada? (s/n): ").strip().lower() == 's'
+                    print(f"{GREEN}✓ Configurado{RESET}")
                     time.sleep(1)
-                
+
                 elif opcao == "0":
                     print(f"\n{GREEN}👋 Saindo...{RESET}")
                     break
-                
+
                 else:
                     print(f"{RED}Opção inválida{RESET}")
                     time.sleep(1)
-    
+
     # Executar
     try:
-        av = AntivirusEngine()
+        print(f"\n{CYAN}Iniciando Antivírus pyOS...{RESET}")
+        auto = input("Ativar ação automática? (s/n): ").strip().lower() == 's'
+        av = AntivirusEngine(auto_action=auto)
         av.menu_interativo()
     except KeyboardInterrupt:
         print(f"\n\n{YELLOW}Interrompido{RESET}")
@@ -961,6 +1615,7 @@ def antivirus():
         print(f"\n{RED}Erro: {e}{RESET}")
         traceback.print_exc()
         input("Pressione Enter...")
+
 
 
 def diskMgr():

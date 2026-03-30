@@ -46,7 +46,7 @@ import hashlib
 import secrets
 import getpass
 
-versionparts = [6, 5]
+versionparts = [6, 6]
 rodando2 = {}
 version = f"v{versionparts[0]}.{versionparts[1]}"
 dir_original = os.getcwd()
@@ -272,7 +272,7 @@ pyOS()
 
 
 # Arquivos de configuração (nomes ocultos para maior discrição)
-ARQUIVO_CONFIG = ".password_config"
+ARQUIVO_SENHA_CONFIG = ".password_config"
 ARQUIVO_CREDENCIAIS = ".credenciais"
 
 def gerar_hash_senha(senha, salt):
@@ -300,7 +300,7 @@ def configurar_senha():
         
         if senha != confirmacao:
             print("As senhas não coincidem. Configuração cancelada.")
-            with open(ARQUIVO_CONFIG, 'w') as cfg:
+            with open(ARQUIVO_SENHA_CONFIG, 'w') as cfg:
                 cfg.write("False")
             definir_permissoes_seguras(ARQUIVO_CONFIG)
             return
@@ -312,28 +312,28 @@ def configurar_senha():
         hash_senha = gerar_hash_senha(senha, salt.encode('utf-8'))
         
         # Salvar config (True)
-        with open(ARQUIVO_CONFIG, 'w') as cfg01:
+        with open(ARQUIVO_SENHA_CONFIG, 'w') as cfg01:
             cfg01.write("True")
         
         # Salvar salt e hash (formato: salt$hash)
         with open(ARQUIVO_CREDENCIAIS, 'w') as cfg02:
             cfg02.write(f"{salt}${hash_senha}")
         
-        definir_permissoes_seguras(ARQUIVO_CONFIG)
+        definir_permissoes_seguras(ARQUIVO_SENHA_CONFIG)
         definir_permissoes_seguras(ARQUIVO_CREDENCIAIS)
         print("Senha configurada com sucesso!")
         
     elif senhaconfig01 == "n":
-        with open(ARQUIVO_CONFIG, 'w') as cfg01:
+        with open(ARQUIVO_SENHA_CONFIG, 'w') as cfg01:
             cfg01.write("False")
-        definir_permissoes_seguras(ARQUIVO_CONFIG)
+        definir_permissoes_seguras(ARQUIVO_SENHA_CONFIG)
         print("Acesso sem senha configurado.")
     else:
         print("Opção não reconhecida.")
 
 def verificar_senha():
     try:
-        with open(ARQUIVO_CONFIG, 'r') as existe:
+        with open(ARQUIVO_SENHA_CONFIG, 'r') as existe:
             sim = existe.read().strip()
     except FileNotFoundError:
         return True  # Arquivo não existe, permite acesso
@@ -368,7 +368,7 @@ def verificar_senha():
 
 # --- Lógica Principal ---
 
-if not os.path.exists(ARQUIVO_CONFIG):
+if not os.path.exists(ARQUIVO_SENHA_CONFIG):
     configurar_senha()
 else:
     if not verificar_senha():
@@ -383,7 +383,7 @@ except:
 
 # O restante do seu programa continuaria aqui...
 print(f"bem-vindo {nome}")
-time.sleep(0.4)
+time.sleep(0.5)
 
 
 sys.path.insert(0, "pyOS/system/modules")

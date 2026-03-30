@@ -2149,8 +2149,7 @@ def atualizar_sistema():
 	print(f"\n{Fore.YELLOW}📥 Baixando nova versão...{Fore.RESET}")
 	
 	PYOS_URLS = [
-		"https://raw.githubusercontent.com/Miguel2729/pyOS/main/pyOS.py",
-		"https://cdn.jsdelivr.net/gh/Miguel2729/pyOS@main/pyOS.py",  # Fonte alternativa
+		"https://raw.githubusercontent.com/Miguel2729/pyOS/main/pyOS.py"
 	]
 	
 	temp_file = tempfile.NamedTemporaryFile(mode='wb', delete=False, suffix='.py')

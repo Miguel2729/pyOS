@@ -44,3 +44,4 @@ adições mais recentes:
 6.6: corrigiu o instalador de apps, adicionou senha ao priv
 6.7: deu liberdade ao terminal(agora só tem avisos) e melhorou a segurança das atualizações
 6.8: melhorou o antivírus e adicionou verificação de versao já atualizada nas atualizações
+7.0: atualizou a forma que o pyOS armazena informações, mudou a forma de controlar internet, adicionou a opção "substuir emojis"

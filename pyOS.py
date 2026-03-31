@@ -46,35 +46,31 @@ import hashlib
 import secrets
 import getpass
 
-versionparts = [6, 8]
-rodando2 = {}
-version = f"v{versionparts[0]}.{versionparts[1]}"
-dir_original = os.getcwd()
-
-def criar_barra(msg):
-		try:
-				print(f'{msg}				  {pyOS_system.winbtn}')
-		except Exception:
-				print(f'{msg}				  ? ? ?')
-
 def exception_handler(exc_type, exc_value, exc_traceback):
+	
 	if issubclass(exc_type, KeyboardInterrupt):
 		sys.__excepthook__(exc_type, exc_value, exc_traceback)
 		return
-
-
+	
 	# Primeiro limpa a tela
 	os.system('cls' if os.name == 'nt' else 'clear')
 
 	# depois chama a função criar_barra
 	criar_barra("system error")
 
+	try:
+		tb = exc_traceback
+		while tb.tb_next:
+			print(f"{tb.tb_lineno} - {tb.tb_frame.f_code.co_filename}")
+			tb = tb.tb_next
+	except Exception as e:
+		print(f"erro ao pegar última pilha: {e}")
 
 
 	# Printa o erro
 	print("⚠️ " + str(exc_value))
 
-	# Menu de opções
+	# Menu de opçõe
 	print("[1] reiniciar o sistema | [2] desligar o sistema | [0] ignorar")
 
 	while True:
@@ -95,6 +91,19 @@ def exception_handler(exc_type, exc_value, exc_traceback):
 			quit()
 
 sys.excepthook = exception_handler
+
+
+
+versionparts = [7, 0]
+rodando2 = {}
+version = f"v{versionparts[0]}.{versionparts[1]}"
+dir_original = os.getcwd()
+
+def criar_barra(msg):
+		try:
+				print(f'{msg}				  {pyOS_system.winbtn}')
+		except Exception:
+				print(f'{msg}				  ? ? ?')
 
 
 
@@ -139,7 +148,845 @@ def instalar_modulos():
 
 		with open("pyOS_system.py", 'w') as mod2:
 				mod2.write("import os\n\nwinbtn = '_ ⛶ X'\ndef upgpip():\n\tos.system('pip install --upgrade pip')")
+		with open("pyOS_net.py", "w") as mod3:
+			mod3.write('''
+import subprocess
+import re
+import os
+from typing import List, Optional, Tuple, Dict
+
+class Internet:
+    """
+    Classe para gerenciar conexões de internet em distribuições Linux.
+    Suporta NetworkManager, systemd-networkd, ifupdown, e interfaces tradicionais.
+    """
+    
+    def __init__(self):
+        """Inicializa a classe Internet"""
+        self.network_manager = self._detect_network_manager()
+        self.interface = self._get_default_interface()
+        
+    def _detect_network_manager(self) -> str:
+        """Detecta qual gerenciador de rede está em uso"""
+        # Verificar NetworkManager via systemctl (se disponível)
+        try:
+            result = subprocess.run(['systemctl', 'is-active', 'NetworkManager'], 
+                                  capture_output=True, text=True, timeout=5)
+            if result.returncode == 0 and 'active' in result.stdout:
+                return 'networkmanager'
+        except (subprocess.SubprocessError, FileNotFoundError):
+            pass
+        
+        # Verificar NetworkManager via service (fallback)
+        try:
+            result = subprocess.run(['service', 'NetworkManager', 'status'],
+                                  capture_output=True, text=True, timeout=5)
+            if result.returncode == 0 and ('active' in result.stdout or 'running' in result.stdout):
+                return 'networkmanager'
+        except (subprocess.SubprocessError, FileNotFoundError):
+            pass
+        
+        # Verificar systemd-networkd via systemctl
+        try:
+            result = subprocess.run(['systemctl', 'is-active', 'systemd-networkd'],
+                                  capture_output=True, text=True, timeout=5)
+            if result.returncode == 0 and 'active' in result.stdout:
+                return 'systemd'
+        except (subprocess.SubprocessError, FileNotFoundError):
+            pass
+        
+        # Verificar ifupdown (Debian/Ubuntu tradicional)
+        if os.path.exists('/etc/network/interfaces') and not self._is_network_manager_managing():
+            return 'ifupdown'
+        
+        # Verificar netctl (Arch Linux)
+        if os.path.exists('/etc/netctl'):
+            return 'netctl'
+        
+        # Verificar connman
+        try:
+            result = subprocess.run(['systemctl', 'is-active', 'connman'],
+                                  capture_output=True, text=True, timeout=5)
+            if result.returncode == 0 and 'active' in result.stdout:
+                return 'connman'
+        except (subprocess.SubprocessError, FileNotFoundError):
+            pass
+        
+        return 'legacy'
+    
+    def _is_network_manager_managing(self) -> bool:
+        """Verifica se NetworkManager está gerenciando a interface"""
+        try:
+            result = subprocess.run(['nmcli', '-t', '-f', 'DEVICE,STATE', 'dev'],
+                                  capture_output=True, text=True, timeout=5)
+            if result.returncode == 0 and self.interface:
+                for line in result.stdout.split('\\n'):
+                    if line.startswith(f'{self.interface}:'):
+                        return 'connected' in line or 'connecting' in line
+        except:
+            pass
+        return False
+    
+    def _get_default_interface(self) -> Optional[str]:
+        """Obtém a interface de rede padrão"""
+        # Usando rota padrão (funciona em todas distros)
+        try:
+            result = subprocess.run(['ip', 'route', 'show', 'default'], 
+                                  capture_output=True, text=True)
+            if result.returncode == 0 and result.stdout:
+                match = re.search(r'dev\\s+(\\S+)', result.stdout)
+                if match:
+                    return match.group(1)
+        except:
+            pass
+        
+        # Fallback: procurar interfaces com IP
+        try:
+            result = subprocess.run(['ip', 'addr', 'show'], 
+                                  capture_output=True, text=True)
+            interfaces = re.findall(r'^\\d+:\\s+(\\w+):', result.stdout, re.MULTILINE)
+            for iface in interfaces:
+                if iface not in ['lo']:
+                    return iface
+        except:
+            pass
+        
+        return None
+    
+    def get_dns(self) -> List[str]:
+        """Retorna a lista de servidores DNS configurados"""
+        dns_servers = []
+        
+        # Primeiro, tenta obter do /etc/resolv.conf
+        try:
+            with open('/etc/resolv.conf', 'r') as f:
+                for line in f:
+                    if line.startswith('nameserver'):
+                        parts = line.split()
+                        if len(parts) >= 2:
+                            dns_server = parts[1].strip()
+                            if dns_server not in dns_servers:
+                                dns_servers.append(dns_server)
+        except:
+            pass
+        
+        # Se não encontrou, tenta via nmcli
+        if not dns_servers and self.network_manager == 'networkmanager':
+            try:
+                result = subprocess.run(['nmcli', 'dev', 'show', self.interface],
+                                      capture_output=True, text=True, timeout=5)
+                if result.returncode == 0:
+                    matches = re.findall(r'DNS:\\s+(\\S+)', result.stdout)
+                    dns_servers.extend(matches)
+            except:
+                pass
+        
+        return dns_servers
+    
+    def get_default_dns(self) -> Optional[str]:
+        """Retorna o servidor DNS padrão (primeiro da lista)"""
+        dns_list = self.get_dns()
+        return dns_list[0] if dns_list else None
+    
+    def set_dns(self, dns_servers: List[str]) -> bool:
+        """Configura os servidores DNS"""
+        if self.network_manager == 'networkmanager':
+            return self._set_dns_nmcli(dns_servers)
+        elif self.network_manager == 'systemd':
+            return self._set_dns_systemd(dns_servers)
+        elif self.network_manager == 'ifupdown':
+            return self._set_dns_ifupdown(dns_servers)
+        else:
+            return self._set_dns_legacy(dns_servers)
+    
+    def _set_dns_nmcli(self, dns_servers: List[str]) -> bool:
+        """Configura DNS via NetworkManager"""
+        try:
+            dns_str = ','.join(dns_servers)
+            result = subprocess.run(['nmcli', 'con', 'mod', self.interface, 
+                                   f'ipv4.dns={dns_str}'], 
+                                  capture_output=True, text=True)
+            if result.returncode == 0:
+                # Reinicia a conexão para aplicar
+                subprocess.run(['nmcli', 'con', 'down', self.interface], 
+                             capture_output=True)
+                subprocess.run(['nmcli', 'con', 'up', self.interface], 
+                             capture_output=True)
+                return True
+        except:
+            pass
+        return False
+    
+    def _set_dns_systemd(self, dns_servers: List[str]) -> bool:
+        """Configura DNS via systemd-networkd"""
+        try:
+            # Encontra o arquivo de configuração da interface
+            netdev_file = f'/etc/systemd/network/10-{self.interface}.network'
+            dns_str = ' '.join(dns_servers)
+            
+            with open(netdev_file, 'w') as f:
+                f.write(f'[Match]\\nName={self.interface}\\n\\n')
+                f.write('[Network]\\n')
+                f.write(f'DNS={dns_str}\\n')
+                f.write('DHCP=yes\\n')
+            
+            # Reinicia o serviço
+            try:
+                subprocess.run(['systemctl', 'restart', 'systemd-networkd'], 
+                             capture_output=True)
+            except:
+                pass
+            
+            return True
+        except:
+            return False
+    
+    def _set_dns_ifupdown(self, dns_servers: List[str]) -> bool:
+        """Configura DNS via /etc/network/interfaces"""
+        try:
+            with open('/etc/network/interfaces', 'r') as f:
+                content = f.read()
+            
+            # Remove configurações DNS existentes
+            content = re.sub(r'\\s*dns-nameservers\\s+.*', '', content)
+            content = re.sub(r'\\s*dns-search\\s+.*', '', content)
+            
+            # Adiciona novos DNS
+            dns_str = ' '.join(dns_servers)
+            content += f'\\ndns-nameservers {dns_str}\\n'
+            
+            with open('/etc/network/interfaces', 'w') as f:
+                f.write(content)
+            
+            # Reinicia a interface
+            try:
+                subprocess.run(['ifdown', self.interface], capture_output=True)
+                subprocess.run(['ifup', self.interface], capture_output=True)
+            except:
+                pass
+            
+            return True
+        except:
+            return False
+    
+    def _set_dns_legacy(self, dns_servers: List[str]) -> bool:
+        """Configura DNS diretamente no /etc/resolv.conf"""
+        try:
+            # Backup do resolv.conf original
+            if not os.path.exists('/etc/resolv.conf.backup'):
+                subprocess.run(['cp', '/etc/resolv.conf', '/etc/resolv.conf.backup'])
+            
+            with open('/etc/resolv.conf', 'w') as f:
+                f.write('# Configurado por Internet class\\n')
+                for dns in dns_servers:
+                    f.write(f'nameserver {dns}\\n')
+            
+            return True
+        except:
+            return False
+    
+    def enable(self) -> bool:
+        """Habilita a interface de rede"""
+        try:
+            subprocess.run(['ip', 'link', 'set', self.interface, 'up'], 
+                         check=True, capture_output=True)
+            return True
+        except:
+            return False
+    
+    def disable(self) -> bool:
+        """Desabilita a interface de rede"""
+        try:
+            subprocess.run(['ip', 'link', 'set', self.interface, 'down'], 
+                         check=True, capture_output=True)
+            return True
+        except:
+            return False
+    
+    def connected(self) -> bool:
+        """Verifica se está conectado à internet"""
+        try:
+            # Tenta pingar um servidor confiável
+            result = subprocess.run(['ping', '-c', '1', '-W', '2', '8.8.8.8'],
+                                  capture_output=True, timeout=5)
+            if result.returncode == 0:
+                return True
+            
+            # Fallback: tenta outro servidor
+            result = subprocess.run(['ping', '-c', '1', '-W', '2', '1.1.1.1'],
+                                  capture_output=True, timeout=5)
+            return result.returncode == 0
+        except:
+            return False
+    
+    def connect(self, nome_rede: str, senha: str) -> bool:
+        """Conecta a uma rede Wi-Fi"""
+        if self.network_manager == 'networkmanager':
+            return self._connect_nmcli(nome_rede, senha)
+        elif self.network_manager == 'netctl':
+            return self._connect_netctl(nome_rede, senha)
+        else:
+            # Fallback: tenta wpa_supplicant
+            return self._connect_wpa_supplicant(nome_rede, senha)
+    
+    def _connect_nmcli(self, nome_rede: str, senha: str) -> bool:
+        """Conecta via NetworkManager"""
+        try:
+            # Tenta conectar primeiro (se já configurado)
+            result = subprocess.run(['nmcli', 'dev', 'wifi', 'connect', nome_rede, 
+                                   'password', senha], 
+                                  capture_output=True, text=True, timeout=10)
+            return result.returncode == 0
+        except:
+            return False
+    
+    def _connect_netctl(self, nome_rede: str, senha: str) -> bool:
+        """Conecta via netctl (Arch Linux)"""
+        try:
+            profile = f'/etc/netctl/{nome_rede}'
+            with open(profile, 'w') as f:
+                f.write(f\'\'\'Description='{nome_rede}'
+Interface={self.interface}
+Connection=wireless
+Security=wpa
+ESSID='{nome_rede}'
+Key='{senha}'
+\'\'\')
+            
+            subprocess.run(['netctl', 'stop-all'], capture_output=True)
+            subprocess.run(['netctl', 'start', nome_rede], capture_output=True)
+            return True
+        except:
+            return False
+    
+    def _connect_wpa_supplicant(self, nome_rede: str, senha: str) -> bool:
+        """Conecta via wpa_supplicant (fallback)"""
+        try:
+            # Cria arquivo de configuração
+            config = f\'\'\'ctrl_interface=/var/run/wpa_supplicant
+network={{
+    ssid="{nome_rede}"
+    psk="{senha}"
+}}
+\'\'\'
+            with open('/tmp/wpa_supplicant.conf', 'w') as f:
+                f.write(config)
+            
+            # Para processos existentes
+            subprocess.run(['killall', 'wpa_supplicant'], capture_output=True)
+            
+            # Inicia wpa_supplicant
+            subprocess.Popen(['wpa_supplicant', '-B', '-i', self.interface, 
+                            '-c', '/tmp/wpa_supplicant.conf'], 
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            
+            # Obtém IP via DHCP
+            subprocess.run(['dhclient', self.interface], capture_output=True)
+            return True
+        except:
+            return False
+    
+    def disconnect(self) -> bool:
+        """Desconecta da rede atual"""
+        if self.network_manager == 'networkmanager':
+            try:
+                subprocess.run(['nmcli', 'dev', 'disconnect', self.interface],
+                             capture_output=True)
+                return True
+            except:
+                pass
+        else:
+            try:
+                subprocess.run(['ip', 'link', 'set', self.interface, 'down'],
+                             capture_output=True)
+                return True
+            except:
+                pass
+        return False
+    
+    def get_my_ip(self) -> Optional[str]:
+        """Retorna o IP local da máquina"""
+        try:
+            result = subprocess.run(['ip', 'addr', 'show', self.interface],
+                                  capture_output=True, text=True)
+            match = re.search(r'inet\\s+(\\d+\\.\\d+\\.\\d+\\.\\d+)', result.stdout)
+            if match:
+                return match.group(1)
+        except:
+            pass
+        return None
+    
+    def get_wifi_names(self) -> List[str]:
+        """Retorna a lista de redes Wi-Fi disponíveis"""
+        wifi_networks = []
+        
+        try:
+            # Tenta com nmcli
+            result = subprocess.run(['nmcli', 'dev', 'wifi', 'list'],
+                                  capture_output=True, text=True, timeout=10)
+            if result.returncode == 0:
+                lines = result.stdout.strip().split('\\n')[1:]  # Pula cabeçalho
+                for line in lines:
+                    parts = line.split()
+                    if len(parts) >= 2:
+                        ssid = ' '.join(parts[1:])
+                        if ssid and ssid != '--':
+                            wifi_networks.append(ssid)
+        except:
+            pass
+        
+        # Fallback: tenta iwlist
+        if not wifi_networks:
+            try:
+                result = subprocess.run(['iwlist', self.interface, 'scan'],
+                                      capture_output=True, text=True, timeout=15)
+                if result.returncode == 0:
+                    matches = re.findall(r'ESSID:"([^"]+)"', result.stdout)
+                    wifi_networks = list(set(matches))  # Remove duplicatas
+            except:
+                pass
+        
+        return wifi_networks
+    
+    def support(self) -> Dict[str, bool]:
+        """Retorna informações sobre suporte da distribuição"""
+        return {
+            'network_manager': self.network_manager == 'networkmanager',
+            'systemd_networkd': self.network_manager == 'systemd',
+            'ifupdown': self.network_manager == 'ifupdown',
+            'netctl': self.network_manager == 'netctl',
+            'connman': self.network_manager == 'connman',
+            'has_interface': self.interface is not None,
+            'can_scan_wifi': len(self.get_wifi_names()) > 0
+        }
+
+
+# Exemplo de uso
+if __name__ == "__main__":
+    net = Internet()
+    
+    print(f"Interface: {net.interface}")
+    print(f"Gerenciador: {net.network_manager}")
+    print(f"DNS: {net.get_dns()}")
+    print(f"Default DNS: {net.get_default_dns()}")
+    print(f"IP: {net.get_my_ip()}")
+    print(f"Conectado: {net.connected()}")
+    print(f"Wi-Fi disponíveis: {net.get_wifi_names()[:5]}")
+    print(f"Suporte: {net.support()}")
+
+			''')
+		with open("pyOS_reg.py", "w") as mod4:
+			mod4.write('''
+# pyOS_reg - Versão Corrigida
+
+import pickle
+import re
+import os
+from typing import Optional, List, Union, Dict, Any
+import atexit
+import threading as th
+import time
+
+class RegString:
+    """
+    Classe para gerenciar strings com validações e restrições.
+    """
+    
+    def __init__(
+        self,
+        text: str = "",
+        default: Optional[str] = None,
+        minchar: Optional[int] = None,
+        maxchar: Optional[int] = None,
+        accepted_chars: Optional[List[str]] = None,
+        regex: Optional[str] = None
+    ):
+        """
+        Inicializa uma RegString com validações.
+        
+        Args:
+            text: Texto inicial
+            default: Texto padrão (usado se a string for modificada para vazia)
+            minchar: Número mínimo de caracteres (None = sem limite)
+            maxchar: Número máximo de caracteres (None = sem limite)
+            accepted_chars: Lista de caracteres permitidos (None = todos)
+            regex: Expressão regular para validação (None = sem validação)
+        """
+        self._default = default
+        self._minchar = minchar
+        self._maxchar = maxchar
+        self._accepted_chars = accepted_chars
+        self._regex = regex
+        self._text = ""
+        
+        # Valida o default se existir
+        if default is not None and not self._validate(default):
+            raise ValueError(f"Valor default '{default}' não passa nas validações")
+        
+        # Define o texto inicial
+        self.set(text)
+    
+    @property
+    def default(self) -> Optional[str]:
+        return self._default
+    
+    @property
+    def minchar(self) -> Optional[int]:
+        return self._minchar
+    
+    @property
+    def maxchar(self) -> Optional[int]:
+        return self._maxchar
+    
+    @property
+    def accepted_chars(self) -> Optional[List[str]]:
+        return self._accepted_chars
+    
+    @property
+    def regex(self) -> Optional[str]:
+        return self._regex
+    
+    def set(self, text: str) -> bool:
+        """
+        Define o texto após validação.
+        
+        Args:
+            text: Texto a ser definido
+            
+        Returns:
+            bool: True se o texto foi definido com sucesso, False caso contrário
+        """
+        # Tratamento de string vazia
+        if text == "" and self._default is not None:
+            text = self._default
+        
+        # Se default for None e string vazia, mantém vazia
+        if text is None or (text == "" and self._default is None):
+            text = ""
+        
+        # Valida o texto
+        if self._validate(text):
+            self._text = text
+            return True
+        return False
+    
+    def _validate(self, text: str) -> bool:
+        """
+        Valida o texto de acordo com as regras.
+        
+        Args:
+            text: Texto a ser validado
+            
+        Returns:
+            bool: True se válido, False caso contrário
+        """
+        # Validação de caracteres mínimos
+        if self._minchar is not None and len(text) < self._minchar:
+            return False
+        
+        # Validação de caracteres máximos
+        if self._maxchar is not None and len(text) > self._maxchar:
+            return False
+        
+        # Validação de caracteres aceitos
+        if self._accepted_chars is not None:
+            for char in text:
+                if char not in self._accepted_chars:
+                    return False
+        
+        # Validação de regex
+        if self._regex is not None:
+            if not re.match(self._regex, text):
+                return False
+        
+        return True
+    
+    def get(self) -> str:
+        """Retorna o texto atual."""
+        return self._text
+    
+    def append(self, text: str) -> bool:
+        """
+        Adiciona texto ao final da string atual.
+        
+        Args:
+            text: Texto a ser adicionado
+            
+        Returns:
+            bool: True se adicionado com sucesso, False caso contrário
+        """
+        new_text = self._text + text
+        if self._validate(new_text):
+            self._text = new_text
+            return True
+        return False
+    
+    def clear(self) -> None:
+        """Limpa a string (reseta para valor padrão ou vazio)."""
+        self.set("")
+    
+    def is_valid(self) -> bool:
+        """Verifica se o texto atual é válido."""
+        return self._validate(self._text)
+    
+    def __str__(self) -> str:
+        """Representação string da RegString."""
+        return self._text
+    
+    def __len__(self) -> int:
+        """Retorna o comprimento da string."""
+        return len(self._text)
+    
+    def __bool__(self) -> bool:
+        """Retorna True se a string não estiver vazia."""
+        return bool(self._text)
+
+
+class RegNumber:
+    def __init__(self, n, max_val=float("inf"), min_val=float("-inf"), accept_decimal=True):
+        self._accept_decimal = accept_decimal
+        self._max = max_val
+        self._min = min_val
+        self._n = None
+        self.set_value(n)
+    
+    @property
+    def accept_decimal(self) -> bool:
+        return self._accept_decimal
+    
+    @property
+    def max(self):
+        return self._max
+    
+    @property
+    def min(self):
+        return self._min
+    
+    @property
+    def n(self):
+        return self._n
+    
+    def _validate(self, n):
+        # Check if number type is valid
+        if not isinstance(n, (int, float)):
+            raise TypeError("Value must be a number (int or float)")
+        
+        # Check decimal acceptance
+        if not self._accept_decimal and isinstance(n, float):
+            raise ValueError("Decimal numbers are not accepted")
+        
+        # Check min/max bounds
+        if n < self._min:
+            raise ValueError(f"Value {n} is below minimum {self._min}")
+        if n > self._max:
+            raise ValueError(f"Value {n} is above maximum {self._max}")
+        
+        return n
+    
+    def _to_number(self, other):
+        """Convert other to number for comparison"""
+        if isinstance(other, RegNumber):
+            return other.n
+        elif isinstance(other, (int, float)):
+            return other
+        else:
+            raise TypeError(f"Cannot compare RegNumber with {type(other)}")
+    
+    # Comparison methods
+    def __eq__(self, other):
+        try:
+            return self.n == self._to_number(other)
+        except TypeError:
+            return False
+    
+    def __ne__(self, other):
+        try:
+            return self.n != self._to_number(other)
+        except TypeError:
+            return False
+    
+    def __lt__(self, other):
+        return self.n < self._to_number(other)
+    
+    def __le__(self, other):
+        return self.n <= self._to_number(other)
+    
+    def __gt__(self, other):
+        return self.n > self._to_number(other)
+    
+    def __ge__(self, other):
+        return self.n >= self._to_number(other)
+    
+    def __str__(self):
+        return str(self.n)
+    
+    def __repr__(self):
+        return f"RegNumber({self.n}, max={self._max}, min={self._min}, accept_decimal={self._accept_decimal})"
+    
+    def set_value(self, new_n):
+        """Define novo valor com validação"""
+        self._n = self._validate(new_n)
+    
+    def get_value(self):
+        return self.n
+    
+    def __int__(self):
+        return int(self.n)
+    
+    def __float__(self):
+        return float(self.n)
+
+
+class RegVar:
+    def __init__(self, props: Dict[str, Union[RegNumber, RegString, bool, List[Any], Dict[Any, Any]]]):
+        self._prop = props
+    
+    def getprop(self, name):
+        if name not in self._prop:
+            raise KeyError(f"Propriedade '{name}' não existe")
+        return self._prop[name]
+    
+    def setprop(self, name, value):
+        if name not in self._prop.keys():
+            raise AttributeError(f"Propriedade '{name}' não existe - não é possível criar novas propriedades")
+        self._prop[name] = value
+    
+    def list_props(self):
+        return list(self._prop.keys())
+    
+    def __getitem__(self, name):
+        return self.getprop(name)
+    
+    def __setitem__(self, name, value):
+        self.setprop(name, value)
+
+
+class RegTree:
+    def __init__(self):
+        self._filhos = {}
+    
+    @property
+    def filhos(self):
+        return self._filhos
+    
+    def __getattr__(self, n):
+        if n == "_filhos":
+            return super().__getattribute__(n)
+        if n.upper() not in self._filhos:
+            raise AttributeError(f"'{n}' não encontrado na árvore")
+        return self._filhos[n.upper()]
+    
+    def __setattr__(self, n, v):
+        if n == "_filhos":
+            super().__setattr__(n, v)
+            return
+        if isinstance(v, (RegTree, RegVar)):
+            self._filhos[n.upper()] = v
+        else:
+            raise TypeError(f"Valor deve ser RegTree ou RegVar, obtido {type(v)}")
+    
+    def __delattr__(self, n):
+        if n == "_filhos":
+            raise AttributeError("Não é possível deletar _filhos")
+        if n.upper() in self._filhos:
+            del self._filhos[n.upper()]
+        else:
+            raise AttributeError(f"'{n}' não encontrado")
+    
+    def get(self, name):
+        """Obtém um filho pelo nome (case-insensitive)"""
+        return self._filhos.get(name.upper())
+    
+    def list(self):
+        """Retorna lista de nomes dos filhos"""
+        return list(self._filhos.copy().keys())
+    
+    def __contains__(self, name):
+        return name.upper() in self._filhos
+
+
+class RegMgr:
+    def __init__(self, filename, load_t=1.2):
+        self._filename = filename
+        self._regs = {}
+        self._wt = load_t
+        self._dirty = False
+        self._load()
+        self._lm = th.Thread(target=self._auto_load, daemon=True)
+        self._lm.start()
+        atexit.register(self.save)
+    def _auto_load(self):
+        self._load()
+        time.sleep(self._wt)
+    def _load(self):
+        """Carrega os registros do arquivo"""
+        if os.path.exists(self._filename) and os.path.getsize(self._filename) > 0:
+            try:
+                with open(self._filename, "rb") as f:
+                    self._regs = pickle.load(f)
+            except (pickle.PickleError, EOFError, FileNotFoundError) as e:
+                print(f"Erro ao carregar arquivo: {e}")
+                self._regs = {}
+        else:
+            self._regs = {}
+    
+    def save(self):
+        """Salva os registros no arquivo"""
+        if self._dirty:
+            try:
+                # Cria diretório se não existir
+                os.makedirs(os.path.dirname(self._filename), exist_ok=True)
+                with open(self._filename, "wb") as f:
+                    pickle.dump(self._regs, f)
+                self._dirty = False
+            except Exception as e:
+                print(f"Erro ao salvar arquivo: {e}")
+    
+    def __setattr__(self, n, v):
+        if n in ["_filename", "_regs", "_dirty"]:
+            super().__setattr__(n, v)
+            return
+        if isinstance(v, (RegTree, RegVar)):
+            self._regs[n.upper()] = v
+            self._dirty = True
+        else:
+            raise TypeError(f"Valor deve ser RegTree ou RegVar, obtido {type(v)}")
+    
+    def __getattr__(self, n):
+        if n in ["_filename", "_regs", "_dirty"]:
+            return super().__getattr__(n)
+        if n.upper() not in self._regs:
+            raise AttributeError(f"Registro '{n}' não encontrado")
+        return self._regs[n.upper()]
+    
+    def __delattr__(self, n):
+        if n in ["_filename", "_regs", "_dirty"]:
+            raise AttributeError(f"Não é possível deletar {n}")
+        if n.upper() in self._regs:
+            del self._regs[n.upper()]
+            self._dirty = True
+        else:
+            raise AttributeError(f"Registro '{n}' não encontrado")
+    
+    def get(self, name):
+        """Obtém um registro pelo nome (case-insensitive)"""
+        return self._regs.get(name.upper())
+    
+    def list(self):
+        """Lista todos os registros"""
+        return list(self._regs.copy().keys())
+    
+    def __contains__(self, name):
+        return name.upper() in self._regs
+    
+    def close(self):
+        """Fecha e salva os registros"""
+        self.save()
+
+
+''')
 		os.chdir(diratual)
+		
 
 
 
@@ -269,28 +1116,155 @@ def pyOS():
 
 pyOS()
 
+sys.path.insert(0, "pyOS/system/modules")
+
+import pyOS_reg as preg
+from pyOS_net import Internet
+import builtins
+
+registro = preg.RegMgr("./pyOS/registro.pkl")
 
 
-# Arquivos de configuração (nomes ocultos para maior discrição)
-ARQUIVO_SENHA_CONFIG = ".password_config"
-ARQUIVO_CREDENCIAIS = ".credenciais"
+if not hasattr(registro, "credentials"):
+	registro.credentials = preg.RegVar({"username": preg.RegString("usuário"), "senha": preg.RegString(""), "tem-senha": False, "configurado": False})
 
+if not hasattr(registro, "boot"):
+	registro.boot = preg.RegTree()
+
+if not hasattr(registro, "config"):
+	registro.config = preg.RegTree()
+	registro.config.net = preg.RegTree()
+	dns = []
+	registro.config.text = preg.RegVar({"allow-emojis": True, "lang": preg.RegString("pt-BR"), "color": preg.RegString("WHITE")})
+
+def emoji(texto):
+    """
+    Transforma emojis em caracteres comuns com cores apropriadas.
+    
+    Args:
+        texto: String contendo emojis
+    
+    Returns:
+        String com caracteres substituídos e tags de cor ANSI
+    """
+    # Mapeamento de emojis para caracteres e cores
+    mapa_emojis = {
+        # Símbolos de alerta e status
+        '⚠️': ('⚠', 'yellow'),      # amarelo
+        '❌': ('✘', 'red'),         # vermelho
+        '✅': ('✔', 'green'),        # verde
+        '☑️': ('✔', 'grey'),         # cinza
+        '▶️': ('▶', 'white'),        # branco
+        
+        # Círculos coloridos
+        '🔴': ('●', 'red'),          # vermelho
+        '🟢': ('●', 'green'),        # verde
+        '🔵': ('●', 'blue'),         # azul
+        '🟡': ('●', 'yellow'),       # amarelo
+        '⚪': ('○', 'grey'),         # cinza
+        
+        # Corações
+        '❤️': ('♥', 'red'),          # vermelho
+        '💚': ('♥', 'green'),        # verde
+        '💙': ('♥', 'blue'),         # azul
+        '💛': ('♥', 'yellow'),       # amarelo
+        '🧡': ('♥', 'yellow'),       # laranja (usando amarelo)
+        '💜': ('♥', 'magenta'),      # roxo
+        '🖤': ('♥', 'grey'),         # preto/cinza
+        
+        # Setas
+        '⬅️': ('←', 'white'),        # branco
+        '➡️': ('→', 'white'),        # branco
+        '⬆️': ('↑', 'white'),        # branco
+        '⬇️': ('↓', 'white'),        # branco
+        '↗️': ('↗', 'white'),        # branco
+        '↘️': ('↘', 'white'),        # branco
+        '↙️': ('↙', 'white'),        # branco
+        '↖️': ('↖', 'white'),        # branco
+        
+        # Símbolos matemáticos e lógicos
+        '➕': ('+', 'green'),         # verde
+        '➖': ('-', 'red'),           # vermelho
+        '✖️': ('×', 'red'),          # vermelho
+        '➗': ('÷', 'white'),         # branco
+        '♾️': ('∞', 'blue'),        # branco
+        
+        # Estrelas
+        '⭐': ('★', 'yellow'),        # amarelo
+        '🌟': ('★', 'yellow'),       # amarelo
+        '✨': ('✧', 'white'),        # branco
+        
+        # Check e X alternativos
+        '☑': ('✔', 'green'),         # verde
+        '✔️': ('✔', 'green'),        # verde
+        '✘': ('✘', 'red'),          # vermelho
+        '✗': ('✗', 'red'),          # vermelho
+        
+        # Sinais de pontuação especiais
+        '‼️': ('‼', 'red'),          # vermelho
+        '⁉️': ('⁉', 'yellow'),       # amarelo
+        '❓': ('?', 'white'),         # branco
+        '❕': ('!', 'red'),           # vermelho
+        '❗': ('!', 'red'),           # vermelho
+    }
+    
+    # Códigos de cores ANSI
+    cores_ansi = {
+        'red': '\033[91m',
+        'green': '\033[92m',
+        'yellow': '\033[93m',
+        'blue': '\033[94m',
+        'magenta': '\033[95m',
+        'cyan': '\033[96m',
+        'grey': '\033[90m',
+        'white': '\033[97m',
+        'brown': '\033[33m',
+        'reset': '\033[0m'
+    }
+    
+    resultado = []
+    i = 0
+    
+    while i < len(texto):
+        substituido = False
+        
+        # Verificar emojis (alguns têm 2 caracteres, como ⚠️)
+        for emoji_char, (caractere, cor) in mapa_emojis.items():
+            if texto[i:i+len(emoji_char)] == emoji_char:
+                # Aplicar cor e caractere
+                cor_ansi = cores_ansi.get(cor, cores_ansi['white'])
+                resultado.append(f"{cor_ansi}{caractere}{cores_ansi['reset']}")
+                i += len(emoji_char)
+                substituido = True
+                break
+        
+        if not substituido:
+            resultado.append(texto[i])
+            i += 1
+    
+    return ''.join(resultado)
+
+def print(*args, **kwargs):
+	import builtins
+	nargs = []
+	for arg in args:
+		if not registro.config.text.getprop("allow-emojis"):
+			nargs.append(emoji(arg))
+		else:
+			nargs.append(arg)
+	builtins.print(*nargs, **kwargs)
+
+if not hasattr(registro.boot, "init"):
+	registro.boot.init = preg.RegVar({"apps": {}})
 def gerar_hash_senha(senha, salt):
 	"""Gera um hash seguro usando PBKDF2-HMAC-SHA256"""
 	return hashlib.pbkdf2_hmac('sha256', senha.encode('utf-8'), salt, 100000).hex()
 
-def definir_permissoes_seguras(caminho_arquivo):
-	"""Tenta definir permissões de leitura/escrita apenas para o dono (Unix)"""
-	try:
-		os.chmod(caminho_arquivo, 0o600)
-	except OSError:
-		# Ignora erro no Windows, pois chmod não funciona da mesma forma
-		pass
+
 
 def configurar_senha():
 	nome = input("digite seu nome de usuário: ") or "usuário"
-	with open("user_name.txt", "w") as f:
-		f.write(nome)
+	registro.credentials.setprop("username", preg.RegString(nome))
 	print("=== Configuração de Segurança ===")
 	senhaconfig01 = input("Deseja definir uma senha de proteção? (s/n): ").lower()
 	
@@ -300,8 +1274,7 @@ def configurar_senha():
 		
 		if senha != confirmacao:
 			print("As senhas não coincidem. Configuração cancelada.")
-			with open(ARQUIVO_SENHA_CONFIG, 'w') as cfg:
-				cfg.write("False")
+			registro.credentials.setprop("tem-senha", False)
 			definir_permissoes_seguras(ARQUIVO_CONFIG)
 			return
 
@@ -311,75 +1284,62 @@ def configurar_senha():
 		# Gerar hash da senha
 		hash_senha = gerar_hash_senha(senha, salt.encode('utf-8'))
 		
-		# Salvar config (True)
-		with open(ARQUIVO_SENHA_CONFIG, 'w') as cfg01:
-			cfg01.write("True")
+		registro.credentials.setprop("tem-senha", True)
+
 		
 		# Salvar salt e hash (formato: salt$hash)
-		with open(ARQUIVO_CREDENCIAIS, 'w') as cfg02:
-			cfg02.write(f"{salt}${hash_senha}")
+		registro.credentials.setprop("senha", RegString(f"{salt}${hash_senha}"))
 		
-		definir_permissoes_seguras(ARQUIVO_SENHA_CONFIG)
-		definir_permissoes_seguras(ARQUIVO_CREDENCIAIS)
 		print("Senha configurada com sucesso!")
 		
 	elif senhaconfig01 == "n":
-		with open(ARQUIVO_SENHA_CONFIG, 'w') as cfg01:
-			cfg01.write("False")
-		definir_permissoes_seguras(ARQUIVO_SENHA_CONFIG)
+		registro.credentials.setprop("tem-senha", False)
 		print("Acesso sem senha configurado.")
 	else:
 		print("Opção não reconhecida.")
+		registro.credentials.setprop("tem-senha", False)
+	registro.credentials.setprop("configurado", True)
 
 def verificar_senha():
 	try:
-		with open(ARQUIVO_SENHA_CONFIG, 'r') as existe:
-			sim = existe.read().strip()
-	except FileNotFoundError:
+		sim = registro.credentials.getprop("tem-senha")
+	except:
 		return True  # Arquivo não existe, permite acesso
 	
 	if sim == "True":
-		try:
-			with open(ARQUIVO_CREDENCIAIS, 'r') as cred:
-				dados = cred.read().strip().split('$')
-				if len(dados) != 2:
-					raise ValueError("Arquivo de credenciais corrompido")
+		dados = registro.credentials.getprop("senha")
+		if len(dados) != 2:
+			raise ValueError("Registro de credenciais corrompido")
 				
-				salt_armazenado, hash_armazenado = dados
+			salt_armazenado, hash_armazenado = dados
 				
-				# Pede a senha sem mostrar na tela
-				senha_user = getpass.getpass("Digite a senha: ")
+			# Pede a senha sem mostrar na tela
+			senha_user = getpass.getpass("Digite a senha: ")
 				
-				# Gera o hash da senha digitada com o mesmo salt
-				hash_tentativa = gerar_hash_senha(senha_user, salt_armazenado.encode('utf-8'))
+			# Gera o hash da senha digitada com o mesmo salt
+			hash_tentativa = gerar_hash_senha(senha_user, salt_armazenado.encode('utf-8'))
 				
-				if hash_tentativa == hash_armazenado:
-					print("Acesso permitido.")
-					return True
-				else:
-					print("Senha incorreta.")
-					return False
-		except FileNotFoundError:
-			print("Erro: Arquivo de senha não encontrado, mas a config diz que existe senha.")
-			return False
+			if hash_tentativa == hash_armazenado:
+				print("Acesso permitido.")
+				return True
+			else:
+				print("Senha incorreta.")
+				return False
 	else:
 		# Se não tem senha, permite acesso direto
 		return True
 
 # --- Lógica Principal ---
 
-if not os.path.exists(ARQUIVO_SENHA_CONFIG):
+if not registro.credentials.getprop("configurado"):
 	configurar_senha()
 else:
 	if not verificar_senha():
 		quit()
 
-nome = "usuário"
-try:
-	with open("user_name.txt", "r") as f:
-		nome = f.read()
-except:
-	pass
+registro.save()
+
+nome = registro.credentials.getprop("username")
 
 # O restante do seu programa continuaria aqui...
 print(f"bem-vindo {nome}")
@@ -2745,6 +3705,8 @@ def config():
 		print("3. desinstalar o pyOS")
 		print("4. gerenciar discos")
 		print("5. atualização/novidades")
+		print("6. editar registro pyOS")
+		print("7. configurações de texto")
 		print("outro/0. sair")
 		print()
 		try:
@@ -2763,13 +3725,156 @@ def config():
 				print("diga uma opção valida")
 				continue
 			if op == 1:
-				cls()
-				abrirapp("controle de internet")
+				# Menu de controle de rede usando Internet()
+				while True:
+					cls()
+					print("controle de internet")
+					net = Internet()
+					print(f"interface: {net.interface or 'não detectada'}")
+					print(f"gerenciador: {net.network_manager}")
+					print(f"conectado: {'sim' if net.connected() else 'não'}")
+					print(f"ip local: {net.get_my_ip() or 'não disponível'}")
+					print()
+					print("1. habilitar interface")
+					print("2. desabilitar interface")
+					print("3. conectar wi-fi")
+					print("4. desconectar")
+					print("5. listar redes wi-fi")
+					print("6. configurar dns")
+					print("7. ver dns atual")
+					print("8. testar conexão")
+					print("0. voltar")
+					print()
+					try:
+						subop = int(input("opção: "))
+					except:
+						print("diga uma opção válida")
+						input("pressione enter para continuar...")
+						continue
+					
+					if subop == 1:
+						if net.enable():
+							print("interface habilitada")
+						else:
+							print("falha ao habilitar interface")
+						input("pressione enter para continuar...")
+					
+					elif subop == 2:
+						if net.disable():
+							print("interface desabilitada")
+						else:
+							print("falha ao desabilitar interface")
+						input("pressione enter para continuar...")
+					
+					elif subop == 3:
+						cls()
+						print("conectar wi-fi")
+						print("listando redes disponíveis...")
+						redes = net.get_wifi_names()
+						if redes:
+							print("\nredes encontradas:")
+							for i, rede in enumerate(redes[:20], 1):
+								print(f"  {i}. {rede}")
+							print()
+							nome = input("nome da rede: ")
+							if nome:
+								senha = input("senha: ")
+								print("conectando...")
+								if net.connect(nome, senha):
+									print("conectado com sucesso!")
+								else:
+									print("falha na conexão")
+							else:
+								print("nome da rede não informado")
+						else:
+							print("nenhuma rede wi-fi encontrada")
+						input("pressione enter para continuar...")
+					
+					elif subop == 4:
+						if net.disconnect():
+							print("desconectado")
+						else:
+							print("falha ao desconectar")
+						input("pressione enter para continuar...")
+					
+					elif subop == 5:
+						cls()
+						print("redes wi-fi disponíveis:")
+						redes = net.get_wifi_names()
+						if redes:
+							for i, rede in enumerate(redes, 1):
+								print(f"  {i}. {rede}")
+							print(f"\ntotal: {len(redes)} redes")
+						else:
+							print("nenhuma rede wi-fi encontrada")
+						input("pressione enter para continuar...")
+					
+					elif subop == 6:
+						cls()
+						print("configurar dns")
+						print("1. dns do google (8.8.8.8, 8.8.4.4)")
+						print("2. dns cloudflare (1.1.1.1, 1.0.0.1)")
+						print("3. dns openDNS (208.67.222.222, 208.67.220.220)")
+						print("4. personalizado")
+						print("0. voltar")
+						try:
+							dnsop = int(input("opção: "))
+						except:
+							print("opção inválida")
+							input("pressione enter...")
+							continue
+						
+						dns_list = []
+						if dnsop == 1:
+							dns_list = ["8.8.8.8", "8.8.4.4"]
+						elif dnsop == 2:
+							dns_list = ["1.1.1.1", "1.0.0.1"]
+						elif dnsop == 3:
+							dns_list = ["208.67.222.222", "208.67.220.220"]
+						elif dnsop == 4:
+							dns1 = input("dns primário: ")
+							dns2 = input("dns secundário (opcional): ")
+							dns_list = [dns1]
+							if dns2:
+								dns_list.append(dns2)
+						else:
+							continue
+						
+						if dns_list:
+							if net.set_dns(dns_list):
+								print("dns configurado com sucesso!")
+							else:
+								print("falha ao configurar dns (tente como root)")
+						input("pressione enter para continuar...")
+					
+					elif subop == 7:
+						cls()
+						print("dns atual:")
+						dns_list = net.get_dns()
+						if dns_list:
+							for i, dns in enumerate(dns_list, 1):
+								print(f"  {i}. {dns}")
+						else:
+							print("nenhum dns configurado")
+						input("pressione enter para continuar...")
+					
+					elif subop == 8:
+						cls()
+						print("testando conexão...")
+						if net.connected():
+							print("conexão com internet: ok")
+						else:
+							print("conexão com internet: falha")
+						input("pressione enter para continuar...")
+					
+					elif subop == 0:
+						break
+					else:
+						print("opção inválida")
+						input("pressione enter...")
 				cls()
 			elif op == 2:
-				cls()
 				abrirapp("diagnostico de rede")
-				cls()
 			else:
 				pass
 				cls()
@@ -2835,17 +3940,14 @@ def config():
 						os.kill(rodando2[apps[op]], signal.SIGKILL)
 						del rodando2[apps[op]]
 				elif aop == 5:
-					with open("app_boot_perms.json", "r") as f:
-						ag = json.load(f)
-					with open("app_boot_perms.json", "w") as f:
-						ag[apps[op]] = True
-						json.dump(ag, f)
+					a = registro.boot.init.getprop("apps")
+					a[apps[op]] = True
+					registro.boot.init.setprop("apps", a)
+
 				elif aop == 6:
-					with open("app_boot_perms.json", "r") as f:
-						ag = json.load(f)
-					with open("app_boot_perms.json", "w") as f:
-						ag[apps[op]] = False
-						json.dump(ag, f)
+					a = registro.boot.init.getprop("apps")
+					a[apps[op]] = False
+					registro.boot.init.setprop("apps", a)
 				elif aop == 8:
 					at = formatar_bytes(calcular_tamanho_pasta(path))
 					print(f"tamamho: {at}")
@@ -2900,7 +4002,42 @@ def config():
 				pass
 		elif op == 0:
 			break
-		else:
+		elif op == 6:
+			os.system("clear")
+			criar_barra("editor de registros")
+			regManager()
+		elif op == 7:
+			cls()
+			print("1. mudar idioma dos apps")
+			print("2. ativar substuir emojis")
+			print("3. desativar substuir emojis")
+			print("0. sair")
+			try:
+				op = int(input("opção: "))
+			except:
+				print("opcao inválida")
+				input("pressione enter para sair...")
+			if op == 1:
+				i = input("o novo idioma(ex: en-US, pt_br, pt-rPT, o pyOS irá formatar automaticamente): ")
+				i = i.replace("_", "-")
+				p1, p2 = i.split("-")
+				p1 = p1.lower()
+				if len(p2) == 3:
+					if p2.startswith("r") and p2[1:].isupper():
+						p2 = p2[1:].upper()
+					else:
+						p2 = p2[:2].upper()
+				else:
+					p2 = p2.upper()
+				i = "-".join([p1, p2])
+				registro.config.text.setprop("lang", RegString(i))
+			elif op == 2:
+				registro.config.text.setprop("allow-emojis", False)
+			elif op == 3:
+				registro.config.text.setprop("allow-emojis", True)
+			elif op == 0:
+				pass
+				
 			break
 
 
@@ -6861,15 +7998,573 @@ def paint():
 	except Exception as e:
 		print(f"Erro: {e}")
 
-def rodar2(script, id):
+def regManager():
+    """
+    Gerenciador de Registros do pyOS - Interface curses
+    """
+    import curses
+    import traceback
+    
+    global registro
+    
+    print(Fore.GREEN + "⚠️ atenção:" + Fore.WHITE)
+    print("o editor de registros irá modificar os registros do pyOS,")
+    print("cuidado para não corromper configurações do sistema")
+    a = input("deseja continuar?[S/n]: ").strip().lower()
+    if a == "s":
+        pass
+    else:
+        return
+    
+    
+    def init_colors():
+        if curses.has_colors():
+            curses.start_color()
+            curses.use_default_colors()
+            curses.init_pair(1, curses.COLOR_CYAN, -1)
+            curses.init_pair(2, curses.COLOR_GREEN, -1)
+            curses.init_pair(3, curses.COLOR_YELLOW, -1)
+            curses.init_pair(4, curses.COLOR_RED, -1)
+            curses.init_pair(5, curses.COLOR_MAGENTA, -1)
+            curses.init_pair(6, curses.COLOR_WHITE, curses.COLOR_BLUE)
+            curses.init_pair(7, curses.COLOR_BLACK, curses.COLOR_WHITE)
+            return True
+        return False
+    
+    def get_icon(obj):
+        if obj is None:
+            return "❓"
+        if isinstance(obj, preg.RegTree):
+            return "📁"
+        elif isinstance(obj, preg.RegVar):
+            return "📦"
+        elif isinstance(obj, preg.RegString):
+            return "📝"
+        elif isinstance(obj, preg.RegNumber):
+            return "🔢"
+        return "📄"
+    
+    def get_type_name(obj):
+        if obj is None:
+            return "None"
+        if isinstance(obj, preg.RegTree):
+            return "Tree"
+        elif isinstance(obj, preg.RegVar):
+            return "Var"
+        elif isinstance(obj, preg.RegString):
+            return "String"
+        elif isinstance(obj, preg.RegNumber):
+            return "Number"
+        return "?"
+    
+    def format_value(obj, max_len=30):
+        try:
+            if obj is None:
+                return "None"
+            if isinstance(obj, preg.RegString):
+                val = obj.get()
+                if not val:
+                    return "(vazio)"
+            elif isinstance(obj, preg.RegNumber):
+                val = str(obj.n)
+            elif isinstance(obj, preg.RegVar):
+                props = obj.list_props()
+                if not props:
+                    return "{}"
+                if len(props) > 3:
+                    return f"{{{props[0]}, {props[1]}, ...}}"
+                return f"{{{', '.join(props[:3])}}}"
+            elif isinstance(obj, preg.RegTree):
+                filhos = obj.list()
+                if not filhos:
+                    return "[]"
+                if len(filhos) > 3:
+                    return f"[{filhos[0]}, {filhos[1]}, ...]"
+                return f"[{', '.join(filhos[:3])}]"
+            else:
+                val = str(obj)
+            
+            if len(val) > max_len:
+                return val[:max_len-3] + "..."
+            return val if val else "(vazio)"
+        except:
+            return "?"
+    def get_items(obj):
+        """Retorna lista de (nome, objeto) do objeto atual"""
+        items = []
+        try:
+            # Se for o RegMgr (raiz)
+            if hasattr(obj, 'list') and hasattr(obj, 'get') and not isinstance(obj, (preg.RegTree, preg.RegVar)):
+                for name in obj.list():
+                    child = obj.get(name)
+                    items.append((name, child))
+            # Se for RegTree
+            elif isinstance(obj, preg.RegTree):
+                for name in obj.list():
+                    child = obj.get(name)
+                    items.append((name, child))
+            # Se for RegVar
+            elif isinstance(obj, preg.RegVar):
+                for name in obj.list_props():
+                    prop = obj.getprop(name)
+                    items.append((name, prop))
+        except Exception as e:
+            pass
+        return sorted(items, key=lambda x: x[0])
+        return sorted(items, key=lambda x: x[0])
+    def create_item(stdscr, parent, has_colors):
+        """Cria novo item - Tree ou Var com múltiplas propriedades"""
+        h, w = stdscr.getmaxyx()
+    
+        curses.echo()
+        try:
+            # Limpar área
+            for i in range(3):
+                safe_addstr(stdscr, h-4+i, 2, " " * (w-4))
+        
+            safe_addstr(stdscr, h-4, 2, "Nome: ")
+            stdscr.refresh()
+            name = stdscr.getstr(h-4, 8, 30).decode('utf-8').strip()
+            if not name:
+                return False, "Nome inválido!"
+        
+            # Verificar se já existe
+            existing = [n for n, _ in get_items(parent)]
+            if name in existing:
+                return False, f"'{name}' já existe!"
+        
+            safe_addstr(stdscr, h-3, 2, "Tipo (1=RegTree, 2=RegVar): ")
+            stdscr.refresh()
+            tipo = stdscr.getstr(h-3, 35, 2).decode('utf-8').strip()
+        
+            # Verificar o tipo do parent
+            is_regmgr = isinstance(parent, preg.RegMgr)
+        
+            if tipo == '1':
+                # Criar RegTree
+                if isinstance(parent, preg.RegTree) or is_regmgr:
+                    parent[name.upper()] = preg.RegTree()
+                else:
+                    parent.setprop(name, preg.RegTree())
+                return True, f"📁 Tree '{name}' criado!"
+        
+            elif tipo == '2':
+                # Coletar propriedades primeiro
+                props = {}
+            
+                safe_addstr(stdscr, h-3, 2, " " * (w-4))
+                safe_addstr(stdscr, h-3, 2, "Adicionar propriedades? (s/n): ")
+                stdscr.refresh()
+                add_props = stdscr.getstr(h-3, 35, 2).decode('utf-8').strip().lower()
+            
+                if add_props == 's':
+                    prop_num = 1
+                    while True:
+                        # Limpar área
+                        for i in range(6):
+                            safe_addstr(stdscr, h-6+i, 2, " " * (w-4))
+                    
+                        safe_addstr(stdscr, h-6, 2, f"Propriedade #{prop_num} - Nome (Enter p/ finalizar): ")
+                        stdscr.refresh()
+                        prop_name = stdscr.getstr(h-6, 48, 25).decode('utf-8').strip()
+                    
+                        if not prop_name:
+                            break
+                    
+                        safe_addstr(stdscr, h-5, 2, "Tipo (1=String, 2=Number): ")
+                        stdscr.refresh()
+                        prop_tipo = stdscr.getstr(h-5, 35, 2).decode('utf-8').strip()
+                    
+                        if prop_tipo == '1':
+                            # Configurar String
+                            safe_addstr(stdscr, h-4, 2, "Min chars (Enter p/ sem limite): ")
+                            stdscr.refresh()
+                            min_str = stdscr.getstr(h-4, 35, 5).decode('utf-8').strip()
+                            min_char = int(min_str) if min_str.isdigit() else None
+                        
+                            safe_addstr(stdscr, h-3, 2, "Max chars (Enter p/ sem limite): ")
+                            stdscr.refresh()
+                            max_str = stdscr.getstr(h-3, 35, 5).decode('utf-8').strip()
+                            max_char = int(max_str) if max_str.isdigit() else None
+                        
+                            safe_addstr(stdscr, h-2, 2, "Valor padrão (Enter p/ vazio): ")
+                            stdscr.refresh()
+                            default_val = stdscr.getstr(h-2, 35, 40).decode('utf-8').strip()
+                        
+                            props[prop_name] = preg.RegString(
+                                text=default_val,
+                                default=default_val if default_val else None,
+                                minchar=min_char,
+                                maxchar=max_char
+                            )
+                            safe_addstr(stdscr, h-1, 2, f"✓ String '{prop_name}' criada!")
+                            curses.napms(500)
+                        
+                        elif prop_tipo == '2':
+                            # Configurar Number
+                            safe_addstr(stdscr, h-4, 2, "Valor mínimo (Enter p/ sem limite): ")
+                            stdscr.refresh()
+                            min_str = stdscr.getstr(h-4, 35, 10).decode('utf-8').strip()
+                            min_val = float(min_str) if min_str else float("-inf")
+                        
+                            safe_addstr(stdscr, h-3, 2, "Valor máximo (Enter p/ sem limite): ")
+                            stdscr.refresh()
+                            max_str = stdscr.getstr(h-3, 35, 10).decode('utf-8').strip()
+                            max_val = float(max_str) if max_str else float("inf")
+                        
+                            safe_addstr(stdscr, h-2, 2, "Aceitar decimal? (s/n, Enter p/ sim): ")
+                            stdscr.refresh()
+                            dec_str = stdscr.getstr(h-2, 35, 2).decode('utf-8').strip().lower()
+                            accept_decimal = dec_str != 'n'
+                        
+                            safe_addstr(stdscr, h-1, 2, "Valor padrão (0): ")
+                            stdscr.refresh()
+                            default_str = stdscr.getstr(h-1, 35, 20).decode('utf-8').strip().replace(",", ".")
+                            if "." in default_str:
+                                if default_str.split(".") == "0":
+                                    inteiro = True
+                                else:
+                                    inteiro = False
+                            else:
+                                inteiro = True
+                            default_val = int(default_str) if inteiro else float(default_str)
+                        
+                            props[prop_name] = preg.RegNumber(
+                                n=default_val,
+                                max_val=max_val,
+                                min_val=min_val,
+                                accept_decimal=accept_decimal
+                            )
+                            safe_addstr(stdscr, h-1, 2, f"✓ Number '{prop_name}' criado!")
+                            curses.napms(500)
+                        
+                        else:
+                            safe_addstr(stdscr, h-3, 2, "Tipo inválido! Use 1 ou 2")
+                            curses.napms(1000)
+                            continue
+                    
+                        prop_num += 1
+            
+                # Criar RegVar com todas as propriedades
+                var = preg.RegVar(props)
+            
+                # Salvar o Var
+                if isinstance(parent, preg.RegTree) or is_regmgr:
+                    parent[name.upper()] = var
+                else:
+                    parent.setprop(name, var)
+            
+                num_props = len(var.list_props())
+                return True, f"📦 Var '{name}' criado com {num_props} propriedade(s)!"
+        
+            else:
+                return False, "Tipo inválido! Use 1 ou 2"
+        except Exception as e:
+            return False, f"Erro: {str(e)[:50]}"
+        finally:
+            curses.noecho()
+
+    def edit_item(stdscr, obj, name, has_colors):
+        h, w = stdscr.getmaxyx()
+        
+        curses.echo()
+        try:
+            if isinstance(obj, preg.RegString):
+                current = obj.get()
+                safe_addstr(stdscr, h-4, 2, " " * (w-4))
+                safe_addstr(stdscr, h-4, 2, f"Novo valor ({name}): ")
+                stdscr.refresh()
+                new_val = stdscr.getstr(h-4, 25, 50).decode('utf-8')
+                if obj.set(new_val):
+                    return True, f"✓ '{name}' alterado!"
+                return False, "Valor inválido!"
+            
+            elif isinstance(obj, preg.RegNumber):
+                safe_addstr(stdscr, h-4, 2, " " * (w-4))
+                safe_addstr(stdscr, h-4, 2, f"Novo valor ({name}): ")
+                stdscr.refresh()
+                new_val = stdscr.getstr(h-4, 25, 20).decode('utf-8')
+                if '.' in new_val:
+                    new_val = float(new_val)
+                else:
+                    new_val = int(new_val)
+                obj.set_value(new_val)
+                return True, f"✓ '{name}' = {new_val}"
+            
+            elif isinstance(obj, (preg.RegTree, preg.RegVar)):
+                return True, f"Entrando em {name}..."
+            
+            return False, f"Não é possível editar"
+        except:
+            return False, "Erro!"
+        finally:
+            curses.noecho()
+    
+    def delete_item(parent, name):
+        try:
+            if isinstance(parent, preg.RegTree):
+                delattr(parent, name)
+            elif isinstance(parent, preg.RegVar):
+                if hasattr(parent, '_prop') and name in parent._prop:
+                    del parent._prop[name]
+            return True, f"✓ '{name}' deletado!"
+        except:
+            return False, "Erro ao deletar!"
+    
+    def safe_addstr(stdscr, y, x, text, attr=0):
+        try:
+            h, w = stdscr.getmaxyx()
+            if 0 <= y < h and 0 <= x < w and text:
+                max_len = w - x - 1
+                if max_len > 0:
+                    stdscr.addstr(y, x, str(text)[:max_len], attr)
+        except:
+            pass
+    
+    def main(stdscr):
+        has_colors = init_colors()
+        
+        # O PROBLEMA ESTAVA AQUI - precisamos usar o registro global
+        path = [(registro, "registro (raiz)")]
+        current = registro
+        current_name = "registro (raiz)"
+        selected = 0
+        scroll = 0
+        status = "Bem-vindo! Use ↑/↓ para navegar, Enter para entrar"
+        status_time = 50
+        
+        while True:
+            h, w = stdscr.getmaxyx()
+            
+            # Limpar tela COMPLETAMENTE
+            stdscr.clear()
+            
+            # Título
+            title = f" GERENCIADOR DE REGISTROS - {current_name} "
+            title_x = max(0, (w - len(title)) // 2)
+            safe_addstr(stdscr, 0, title_x, title, curses.A_BOLD if not has_colors else curses.color_pair(1) | curses.A_BOLD)
+            
+            # Linha separadora
+            safe_addstr(stdscr, 1, 0, "=" * (w - 1))
+            
+            # Obter itens
+            items = get_items(current)
+            
+            # Se não há itens, mostrar mensagem
+            if not items and len(path) == 1:
+                msg = "📭 Nenhum registro encontrado. Pressione N para criar um novo."
+                msg_x = max(0, (w - len(msg)) // 2)
+                safe_addstr(stdscr, h//2, msg_x, msg, curses.A_BOLD if not has_colors else curses.color_pair(3))
+            
+            # Menu de ações
+            actions = []
+            if len(path) > 1:
+                actions.append(("🔙 VOLTAR", "back"))
+            actions.append(("➕ CRIAR", "create"))
+            if items:
+                actions.append(("🗑️ DELETAR", "delete"))
+            
+            total = len(actions) + len(items)
+            if selected >= total and total > 0:
+                selected = total - 1
+            if selected < 0 and total > 0:
+                selected = 0
+            
+            # Área de conteúdo começa na linha 3
+            content_y = 3
+            max_content_h = h - content_y - 4
+            
+            # Scroll
+            if selected < scroll:
+                scroll = selected
+            if selected >= scroll + max_content_h:
+                scroll = selected - max_content_h + 1
+            
+            y = content_y
+            
+            # Desenhar ações
+            for i, (text, action) in enumerate(actions):
+                if i < scroll:
+                    continue
+                if y >= h - 3:
+                    break
+                
+                if i == selected:
+                    attr = curses.A_REVERSE if not has_colors else curses.color_pair(6)
+                    prefix = "▶ "
+                else:
+                    attr = 0
+                    prefix = "  "
+                
+                safe_addstr(stdscr, y, 2, prefix + text, attr)
+                y += 1
+            
+            # Separador se houver ações
+            if actions and y < h - 3:
+                safe_addstr(stdscr, y, 2, "─" * (w - 4))
+                y += 1
+            
+            # Desenhar itens
+            for i, (name, obj) in enumerate(items):
+                display_y = y + i - scroll
+                if display_y < y:
+                    continue
+                if display_y >= h - 3:
+                    break
+                
+                global_idx = len(actions) + i
+                
+                if global_idx == selected:
+                    attr = curses.A_REVERSE if not has_colors else curses.color_pair(6)
+                    prefix = "▶ "
+                else:
+                    attr = 0
+                    prefix = "  "
+                
+                icon = get_icon(obj)
+                type_name = get_type_name(obj)
+                value = format_value(obj, w - 35)
+                
+                safe_addstr(stdscr, display_y, 2, f"{prefix}{icon} {name}", attr)
+                if has_colors:
+                    safe_addstr(stdscr, display_y, 22, f"[{type_name}]", curses.color_pair(2))
+                    safe_addstr(stdscr, display_y, 32, value, curses.color_pair(5))
+                else:
+                    safe_addstr(stdscr, display_y, 22, f"[{type_name}]")
+                    safe_addstr(stdscr, display_y, 32, value)
+            
+            # Status
+            if status and status_time > 0:
+                status_time -= 1
+                color = curses.color_pair(2) if "✓" in status else curses.color_pair(4) if "✗" in status else curses.color_pair(3)
+                safe_addstr(stdscr, h-3, 2, status[:w-4], color if has_colors else 0)
+            
+            # Rodapé
+            footer = "↑/↓: navegar | Enter: entrar/editar | N: criar | D: deletar | ESC: voltar | S: salvar | Q: sair"
+            safe_addstr(stdscr, h-2, 0, "─" * (w - 1))
+            safe_addstr(stdscr, h-1, 0, footer[:w-1], curses.A_REVERSE if not has_colors else curses.color_pair(7))
+            
+            stdscr.refresh()
+            
+            # Input
+            key = stdscr.getch()
+            
+            if key == ord('q') or key == ord('Q'):
+                registro.save()
+                break
+            
+            elif key == ord('s') or key == ord('S'):
+                registro.save()
+                status = "✓ Registros salvos!"
+                status_time = 50
+            
+            elif key == curses.KEY_UP:
+                if total > 0:
+                    selected = max(0, selected - 1)
+            
+            elif key == curses.KEY_DOWN:
+                if total > 0:
+                    selected = min(total - 1, selected + 1)
+            
+            elif key == ord('\n') or key == ord('\r'):
+                if selected < len(actions):
+                    action = actions[selected][1]
+                    if action == "back":
+                        if len(path) > 1:
+                            path.pop()
+                            current, current_name = path[-1]
+                            selected = 0
+                            scroll = 0
+                    elif action == "create":
+                        success, msg = create_item(stdscr, current, has_colors)
+                        status = msg
+                        status_time = 50
+                        if success:
+                            registro._dirty = True
+                    elif action == "delete" and items:
+                        idx = selected - len(actions)
+                        if 0 <= idx < len(items):
+                            name, obj = items[idx]
+                            success, msg = delete_item(current, name)
+                            status = msg
+                            status_time = 50
+                            if success:
+                                registro._dirty = True
+                                selected = max(0, selected - 1)
+                else:
+                    idx = selected - len(actions)
+                    if 0 <= idx < len(items):
+                        name, obj = items[idx]
+                        
+                        if isinstance(obj, (preg.RegTree, preg.RegVar)):
+                            path.append((obj, name))
+                            current = obj
+                            current_name = name
+                            selected = 0
+                            scroll = 0
+                        else:
+                            success, msg = edit_item(stdscr, obj, name, has_colors)
+                            status = msg
+                            status_time = 50
+                            if success and "Entrando" not in msg:
+                                registro._dirty = True
+            
+            elif key == ord('n') or key == ord('N'):
+                success, msg = create_item(stdscr, current, has_colors)
+                status = msg
+                status_time = 50
+                if success:
+                    registro._dirty = True
+            
+            elif key == ord('d') or key == ord('D'):
+                if selected >= len(actions) and items:
+                    idx = selected - len(actions)
+                    if 0 <= idx < len(items):
+                        name, obj = items[idx]
+                        success, msg = delete_item(current, name)
+                        status = msg
+                        status_time = 50
+                        if success:
+                            registro._dirty = True
+                            selected = max(0, selected - 1)
+            
+            elif key == 27:  # ESC
+                if len(path) > 1:
+                    path.pop()
+                    current, current_name = path[-1]
+                    selected = 0
+                    scroll = 0
+                else:
+                    registro.save()
+                    break
+            
+            elif key == curses.KEY_RESIZE:
+                stdscr.clear()
+                stdscr.refresh()
+    
+    try:
+        curses.wrapper(main)
+    except KeyboardInterrupt:
+        pass
+    except Exception as e:
+        print(f"Erro: {e}")
+        traceback.print_exc()
+        input("Pressione Enter para sair...")
+
+def rodar2(app, ac="exec2", argv=[]):
 		global rodando2
-		time.sleep(0.7)
+		env = os.environ.copy()
+		lpath = f"{os.getcwd()}/apps/{app}/lib"
+		if env.get("LD_LIBRARY_PATH", ""):
+				env["LD_LIBRARY_PATH"] += ":" + lpath
+		else:
+				env["LD_LIBRARY_PATH"] = lpath
 		null = subprocess.DEVNULL
-		proc = subprocess.Popen([sys.executable, script], stdout=null, stdin=null, stderr=null)
-		rodando2[id] = proc.pid
-		#print(f"{id} como {proc.pid}")
-		time.sleep(0.7)
+		proc = subprocess.Popen([sys.executable, f"{os.getcwd()}/apps/{app}/{ac}.py", *argv], cwd=f"{os.getcwd()}/workspace/{app}", env=env, stdin=null, stdout=null, stderr=null)
+		rodando2[app] = proc.pid
 		return proc
+
+
 
 def init2():
 	# Verificar se a pasta existe antes de tentar listar
@@ -6877,20 +8572,14 @@ def init2():
 		os.makedirs("./apps", exist_ok=True)
 		return
 
-	if not os.path.exists("app_boot_perms.json"):
-		with open("app_boot_perms.json", "w") as f:
-			f.write("{}")
-		return
-
-	with open("app_boot_perms.json", "r") as f:
-		bp = json.load(f)
+	bp = registro.boot.init.getprop("apps")
 
 	for app in os.listdir("./apps"):
 		path = f"./apps/{app}"
 		if os.path.isdir(path):
 				if os.path.exists(f"{path}/exec2.py"):
 					if bp.get(app, False):
-						rodar2(f"{path}/exec2.py", app)
+						rodar2(app)
 
 if "--security-mode" not in sys.argv:
 	init2()

@@ -584,7 +584,6 @@ import re
 import os
 from typing import Optional, List, Union, Dict, Any
 import atexit
-import threading as th
 import time
 
 class RegString:
@@ -912,12 +911,7 @@ class RegMgr:
         self._wt = load_t
         self._dirty = False
         self._load()
-        self._lm = th.Thread(target=self._auto_load, daemon=True)
-        self._lm.start()
         atexit.register(self.save)
-    def _auto_load(self):
-        self._load()
-        time.sleep(self._wt)
     def _load(self):
         """Carrega os registros do arquivo"""
         if os.path.exists(self._filename) and os.path.getsize(self._filename) > 0:
@@ -1090,10 +1084,12 @@ def display_ascii_image(path):
 	print("✅ Recursos do sistema gerados com sucesso.")
 
 
+
 def pyOS():
 	if os.path.exists("./syscreated.txt"):
 			return
 	from pathlib import Path
+	add_papi()
 	os.makedirs("./pyOS/system/modules", exist_ok=True)
 	os.makedirs("./pyOS/system/tmp", exist_ok=True)
 	tmp_dir = Path("./pyOS/system/tmp")

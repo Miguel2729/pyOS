@@ -1,6 +1,6 @@
 {
-"version": "6.8",
-"sha256": "93c771f9602e26dff62bdb7f5c9dcd35780e646909158b40419d1d75d77347b3",
-"changelog": "melhorou o antivírus e adicionou verificação de versao já atualizada nas atualizações"
+"version": "7.0",
+"sha256": "209fb77acc65250f2bc0d0a84a42a653676a1bcf596b41fc51b5fe83d4a4ef48",
+"changelog": "atualizou a forma que o pyOS armazena informações, mudou a forma de controlar internet"
 
 }

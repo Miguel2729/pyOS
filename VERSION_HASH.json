@@ -1,6 +1,6 @@
 {
 "version": "7.0",
 "sha256": "209fb77acc65250f2bc0d0a84a42a653676a1bcf596b41fc51b5fe83d4a4ef48",
-"changelog": "atualizou a forma que o pyOS armazena informações, mudou a forma de controlar internet"
+"changelog": "atualizou a forma que o pyOS armazena informações, mudou a forma de controlar internet, e adicionou a opção 'substuir emojis' "
 
 }

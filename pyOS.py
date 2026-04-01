@@ -905,10 +905,9 @@ class RegTree:
 
 
 class RegMgr:
-    def __init__(self, filename, load_t=1.2):
+    def __init__(self, filename):
         self._filename = filename
         self._regs = {}
-        self._wt = load_t
         self._dirty = False
         self._load()
         atexit.register(self.save)
@@ -1089,7 +1088,6 @@ def pyOS():
 	if os.path.exists("./syscreated.txt"):
 			return
 	from pathlib import Path
-	add_papi()
 	os.makedirs("./pyOS/system/modules", exist_ok=True)
 	os.makedirs("./pyOS/system/tmp", exist_ok=True)
 	tmp_dir = Path("./pyOS/system/tmp")

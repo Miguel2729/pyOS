@@ -68,7 +68,7 @@ fi
 
 read -p "🌐 instalar suporte a sites? [s/N]: " sites
 if [[ $sites =~ ^[Ss]$ ]]; then
-    pip3 install --user beautifulsoup4
+    pip3 install --user beautifulsoup4 yaml
 fi
 
 read -p "🔊instalar suporte a reprodução de áudio e gravação de áudio? [s/N]: " audio
@@ -76,7 +76,7 @@ if [[ $audio =~ ^[Ss]$ ]]; then
     pip3 install --user pyaudio
 fi
 
-read -p "🎯 instalar suporte a gerenciamento de processos do sistema real?(psutil) [s/N]: " proc
+read -p "🎯 instalar suporte a gerenciamento de processos(psutil) [s/N]: " proc
 if [[ $proc =~ ^[Ss]$ ]]; then
     pip3 install --user psutil
 fi

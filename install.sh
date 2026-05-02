@@ -54,13 +54,11 @@ fi
 
 # Instalar dependências Python
 echo "🐍 Instalando dependências Python..."
-pip3 install --user colorama requests
+pip3 install --user colorama requests pillow==12.1.0
+
 
 # Opcionais (pergunta ao usuário)
-read -p "📸 Instalar suporte a imagens (Pillow)? [s/N]: " img
-if [[ $img =~ ^[Ss]$ ]]; then
-    pip3 install --user pillow==12.1.0
-fi
+
 
 read -p "🎤 Instalar reconhecimento de voz? [s/N]: " voz
 if [[ $voz =~ ^[Ss]$ ]]; then

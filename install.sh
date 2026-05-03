@@ -83,7 +83,7 @@ fi
 
 read -p "▶️ deseja configurar o sistema para executar o pyOS automaticamente? [s/N]" autoexec
 if [[ $autoexec =~ ^[Ss]$ ]]; then
-    echo -e "cd $HOME/pyOS\npython3 pyOS.py" >> ~/.bashrc
+    echo -e "cd $HOME/pyOS\nsudo python3 pyOS.py" >> ~/.bashrc
     echo "✅ Configuração adicionada ao ~/.bashrc"
 fi
 

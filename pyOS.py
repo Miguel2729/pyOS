@@ -94,7 +94,7 @@ sys.excepthook = exception_handler
 
 
 
-versionparts = [7, 0]
+versionparts = [7, 1]
 rodando2 = {}
 version = f"v{versionparts[0]}.{versionparts[1]}"
 dir_original = os.getcwd()
@@ -3483,7 +3483,7 @@ def diskMgr():
 def atualizar_sistema():
 	def cls():
 		os.system("clear")
-		criar_barra("system update")
+		criar_barra("atualização")
 	"""
 	Sistema de atualização segura com verificação de integridade
 	- Assinatura digital
@@ -3497,8 +3497,7 @@ def atualizar_sistema():
 	import shutil
 	
 	cls()
-	criar_barra("atualização segura")
-	
+		
 	print(f"{Fore.CYAN}=== ATUALIZAÇÃO SEGURA pyOS ==={Fore.RESET}\n")
 	
 	# === 1. CHAVES PÚBLICAS CONFIÁVEIS ===
@@ -3990,7 +3989,6 @@ def config():
 				input("pressione enter para sair...")
 			if op == 1:
 				os.system("clear")
-				criar_barra("system update")
 				atualizar_sistema()
 			else:
 				pass
@@ -4025,10 +4023,13 @@ def config():
 					p2 = p2.upper()
 				i = "-".join([p1, p2])
 				registro.config.text.setprop("lang", RegString(i))
+				registro.save()
 			elif op == 2:
 				registro.config.text.setprop("allow-emojis", False)
+				registro.save()
 			elif op == 3:
 				registro.config.text.setprop("allow-emojis", True)
+				registro.save()
 			elif op == 0:
 				pass
 				
@@ -7316,15 +7317,14 @@ def uninstall():
 
 		# Configurações a serem salvas
 		config_files = [
-			("senha.txt", "Senha do sistema"),
-			("passwordexist.txt", "Configuração de senha"),
-			("./notes/", "Notas do usuário"),
+			( "./notes/", "Notas do usuário"),
 			("./events/", "Eventos da agenda"),
 			("./audio_files/", "Arquivos de áudio"),
 			("./imgs/", "Imagens do usuário"),
 			("msgs.json", "Mensagens"),
 			("name_user.txt", "Usuários do chat"),
-			("./apps/", "Apps instalados (exceto libs)"),
+			("./apps/", "Apps instalados"),
+			("./workspace", "area de trabalho de apps instalados")
 		]
 
 		print(f"\n{BLUE}📦 Criando backup de configurações...{RESET}")
@@ -7361,41 +7361,7 @@ def uninstall():
 		print(f"\n{GREEN}✅ Backup criado em: {backup_dir}{RESET}")
 		return backup_dir
 
-	def listar_dependencias():
-		"""Lista dependências Python instaladas"""
-		try:
-			print(f"\n{CYAN}📋 Listando dependências instaladas...{RESET}")
-
-			# Verificar requirements.txt se existir
-			requirements_file = "./requirements.txt"
-			if os.path.exists(requirements_file):
-				with open(requirements_file, "r") as f:
-					dependencias = [line.strip() for line in f if line.strip()]
-				print(f"\nDependências do requirements.txt:")
-				for dep in dependencias:
-					print(f"  • {dep}")
-
-			# Verificar módulos em apps/libs
-			libs_dir = "./apps/libs"
-			if os.path.exists(libs_dir):
-				print(f"\nMódulos em apps/libs:")
-				for item in os.listdir(libs_dir):
-					if item.endswith(".py") or os.path.isdir(os.path.join(libs_dir, item)):
-						print(f"  • {item}")
-
-			# Verificar módulos do sistema
-			system_modules = ["colorama", "requests", "pyfiglet", "psutil", "pyaudio", "PIL", "speech_recognition"]
-			print(f"\nMódulos do sistema conhecidos:")
-			for mod in system_modules:
-				try:
-					__import__(mod)
-					print(f"  • {mod} {GREEN}(instalado){RESET}")
-				except ImportError:
-					print(f"  • {mod} {RED}(não instalado){RESET}")
-
-		except Exception as e:
-			print(f"{RED}❌ Erro ao listar dependências: {e}{RESET}")
-
+	
 	def desinstalar_completo():
 		"""Desinstalação completa"""
 		print(f"\n{RED}⚠️  ⚠️  ⚠️  ATENÇÃO: DESINSTALAÇÃO COMPLETA ⚠️  ⚠️  ⚠️{RESET}")
@@ -7429,6 +7395,7 @@ def uninstall():
 			"./events",
 			"./audio_files",
 			"./imgs",
+			"./workspace"
 		]
 
 		for dir_path in dirs_to_remove:
@@ -7448,8 +7415,6 @@ def uninstall():
 		files_to_remove = [
 			"pyOS.py",
 			"syscreated.txt",
-			"senha.txt",
-			"passwordexist.txt",
 			"msgs.json",
 			"name_user.txt",
 			"requirements.txt",
@@ -7552,7 +7517,7 @@ def uninstall():
 		print(f"  • Arquivos de apps em ./apps/ foram mantidos")
 
 		input(f"\nPressione Enter para continuar...")
-
+		sys.exit(0)
 	def desinstalar_simples():
 		"""Desinstalação simples - apenas o arquivo pyOS.py"""
 		print(f"\n{BLUE}🗑️  DESINSTALAÇÃO SIMPLES{RESET}")
@@ -7576,7 +7541,7 @@ def uninstall():
 			print(f"{YELLOW}⚠️  Arquivo pyOS.py não encontrado{RESET}")
 
 		input(f"\nPressione Enter para continuar...")
-
+		sys.exit(0)
 	def desinstalar_customizada():
 		"""Desinstalação customizada"""
 		print(f"\n{MAGENTA}⚙️  DESINSTALAÇÃO PERSONALIZADA{RESET}")
@@ -7593,6 +7558,7 @@ def uninstall():
 			'8': {'nome': 'Mensagens e chats', 'ativo': True},
 			'9': {'nome': 'Dependências Python', 'ativo': False},
 			'10': {'nome': 'Arquivo pyOS.py', 'ativo': True},
+			'11': {'nome': "dados e cache dos aplicativos", "ativo": True},
 		}
 
 		while True:
@@ -7616,6 +7582,7 @@ def uninstall():
 				listar_itens_selecionados(opcoes)
 			elif comando == 'executar':
 				executar_desinstalacao_customizada(opcoes)
+				sys.exit(0)
 				break
 			elif comando in opcoes:
 				opcoes[comando]['ativo'] = not opcoes[comando]['ativo']
@@ -7686,6 +7653,7 @@ def uninstall():
 			'Mensagens e chats': lambda: remover_arquivos(["msgs.json", "name_user.txt"]),
 			'Dependências Python': lambda: desinstalar_dependencias(),
 			'Arquivo pyOS.py': lambda: remover_arquivos(["pyOS.py", "syscreated.txt"]),
+			"dados e cache dos aplicativos": lambda: remover_diretorio("./workspace"),
 		}
 
 		# Executar ações
@@ -7752,9 +7720,6 @@ def uninstall():
 				desinstalar_simples()
 			elif opcao == "4":
 				desinstalar_customizada()
-			elif opcao == "5":
-				listar_dependencias()
-				input(f"\nPressione Enter para continuar...")
 			elif opcao == "6":
 				backup_dir = criar_backup_config()
 				input(f"\nPressione Enter para continuar...")

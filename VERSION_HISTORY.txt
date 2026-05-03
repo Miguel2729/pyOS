@@ -45,3 +45,4 @@ adições mais recentes:
 6.7: deu liberdade ao terminal(agora só tem avisos) e melhorou a segurança das atualizações
 6.8: melhorou o antivírus e adicionou verificação de versao já atualizada nas atualizações
 7.0: atualizou a forma que o pyOS armazena informações, mudou a forma de controlar internet, adicionou a opção "substuir emojis"
+7.1: correções de bugs
